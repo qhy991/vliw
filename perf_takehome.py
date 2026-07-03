@@ -218,6 +218,19 @@ class KernelBuilder:
         self.const_map = {}
         self.ops = []
         self._next_id = 0
+        # Targeted alu->valu rebalance for the hash XOR-combines. Each of the
+        # 3 combines per (vec, round) defaults to 8 ALU slots (v_alu_scalar);
+        # switching to 1 valu slot (v_alu) moves it to the valu engine. The
+        # kernel is alu-bound in the both-idle tails (windup/drain) where valu
+        # has headroom, so we vectorize the first _combine_head and last
+        # _combine_tail combine-instances (in per-rotation emit order), which
+        # relieves the binding ALU floor exactly where valu is idle without
+        # loading the both-bound middle. Rebalancing preserves arithmetic
+        # exactly, so it is always correctness-safe. Counts tuned by sweep.
+        self._combine_no = 0          # combines emitted so far this rotation
+        self._combine_total = 0       # total combines expected this rotation
+        self._combine_head = 10       # vectorize first N combine-instances
+        self._combine_tail = 100      # vectorize last N combine-instances
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -284,6 +297,20 @@ class KernelBuilder:
     def v_muladd(self, dest, a, b, c):
         reads = set(self.lanes(a)) | set(self.lanes(b)) | set(self.lanes(c))
         self.op("valu", ("multiply_add", dest, a, b, c), reads=reads, writes=self.lanes(dest))
+
+    def _combine(self, dest, a, b):
+        """Emit one hash XOR-combine (val = a ^ b). By default this goes on the
+        ALU engine (8 per-lane scalar ops). For combine-instances that fall in
+        the windup/drain tails -- the first _combine_head or last _combine_tail
+        of the rotation -- emit it on the valu engine instead (1 slot), moving
+        load off the binding ALU floor into the tails' idle valu. Arithmetic is
+        identical either way, so correctness is unaffected."""
+        gi = self._combine_no
+        self._combine_no += 1
+        if gi < self._combine_head or gi >= self._combine_total - self._combine_tail:
+            self.v_alu("^", dest, a, b)
+        else:
+            self.v_alu_scalar("^", dest, a, b)
 
     # one round, all vectors (per-vector: original ordering packs best) ----- #
     # depth = round % (forest_height+1). By structural invariant every element
@@ -391,20 +418,27 @@ class KernelBuilder:
         # valu floor below the load floor.
         self.v_muladd(val, val, c["m4097"], c["K0"])
         self.v_alu("^", node, val, c["K1"]); self.v_alu(">>", addr, val, c["sh19"])
-        self.v_alu_scalar("^", val, node, addr)
+        self._combine(val, node, addr)
         self.v_muladd(val, val, c["m33"], c["K2"])
         self.v_alu("+", node, val, c["K3"]); self.v_alu("<<", addr, val, c["sh9"])
-        self.v_alu_scalar("^", val, node, addr)
+        self._combine(val, node, addr)
         self.v_muladd(val, val, c["m9"], c["K4"])
         self.v_alu("^", node, val, c["K5"]); self.v_alu(">>", addr, val, c["sh16"])
-        self.v_alu_scalar("^", val, node, addr)
+        self._combine(val, node, addr)
         # traverse: rem->addr ; i2p1=2*idx+1->node ; idx=i2p1+rem
         # skip_idx_update: on the final round, idx isn't stored/needed anymore,
         # so we can skip the traverse+wrap entirely (saves 3 valu + optional flow).
         if not skip_idx_update:
             self.v_alu("%", addr, val, m2)              # rem = val % 2  (addr free)
-            self.v_muladd(node, idx, m2, one_v)         # i2p1 = 2*idx+1 (node free)
-            self.v_alu("+", idx, node, addr)            # idx = i2p1 + rem
+            if depth == 0:
+                # depth-0 structural invariant: every lane has idx == 0, so
+                # i2p1 = 2*idx+1 == 1 for all lanes. Constant-fold the muladd
+                # away -- idx = 1 + rem directly (one_v is the broadcast of 1).
+                # Saves one valu op per vector on the two depth-0 rounds (0,11).
+                self.v_alu("+", idx, one_v, addr)       # idx = 1 + rem
+            else:
+                self.v_muladd(node, idx, m2, one_v)     # i2p1 = 2*idx+1 (node free)
+                self.v_alu("+", idx, node, addr)        # idx = i2p1 + rem
             # wrap: idx = 0 if idx >= n_nodes. This only happens at the bottom
             # (depth == forest_height): for shallower depths 2*idx+1+rem < n_nodes
             # always, so we skip the wrap entirely for 15 of 16 rounds.
@@ -643,6 +677,11 @@ class KernelBuilder:
         self.ops = []
 
         def gen_body(rot):
+            # Reset the combine counter each rotation so the windup/drain tail
+            # policy in _combine is applied consistently per rotation. Every
+            # vector runs every round; 3 hash combines per (vec, round).
+            self._combine_no = 0
+            self._combine_total = 3 * K * rounds
             perm = [(j - rot) % K for j in range(K)]
             ppos = {perm[p]: p for p in range(K)}
             n_diag = (K + step - 1) // step + rounds - 1

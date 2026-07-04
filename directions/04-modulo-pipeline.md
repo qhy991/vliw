@@ -135,6 +135,16 @@ python -c "from perf_takehome import KernelBuilder; kb=KernelBuilder(); kb.build
 (`n_nodes = 2**(10+1)-1 = 2047`. cycles == len(instrs) for n_groups=1, so no simulator run needed for cycle count.)
 
 ### Probe B — epilogue combines onto idle ALU (1-2 hr)
+
+> **REVIEW CAVEAT:** this probe's premise conflicts with the already-swept evidence. The
+> existing `head=10/tail=100` optimum came from a 64+25-build grid (OPTIMIZATION_NOTES
+> §4.1) in which `tail=0` — i.e. tail combines staying on ALU, exactly what this probe
+> proposes — was in the grid and **lost** to tail-on-valu. The "a0 v6" drain snapshot is
+> the profile *of the tuned optimum*, not evidence that the un-tuned alternative is
+> better; the drain being valu-full with combines on valu does not imply combines on ALU
+> drains faster (the sweep says it doesn't). Run the probe only as a cheap sanity check;
+> expect it to regress, and do not burn more than the stated 1-2 hours.
+
 Independently of the release schedule, change `_combine` so that combines emitted in the **last ~150 emission-order instances go on ALU** (they currently go on valu via the `_combine_tail=100` valu branch — flip the tail branch to `v_alu_scalar`). This directly tests the `a0 v6` observation: the drain has 12 idle ALU slots/cycle and valu is the bottleneck, so moving tail combines *off* valu should shorten the drain. Sweep `_combine_tail ∈ {60,100,150,200}` with the branch flipped:
 ```bash
 for T in 60 100 150 200; do

@@ -1,22 +1,32 @@
-# 10 Long-Range Optimization Directions — Index & Ranking
+# 11 Long-Range Optimization Directions — Index & Ranking
 
 Baseline: **1230 cycles** (throughput floor 1174). Each direction has its own worktree
 under `explore/<key>/` on branch `explore/<key>`, seeded with `DIRECTION.md`.
 
-## Summary table
+> **SECOND-PASS REVIEW (validated in the simulator/reference traces — see §"Second-pass
+> corrections" below):** #2's headline was over-counted (net −224 valu ops, not −512;
+> corrected floor ~1135, not ~1097 — still the biggest lever, ~40 cycles smaller). #3's
+> core identity was **wrong as written** and its Day-1 script would have falsely killed
+> the direction (fixed: invariant is `idx == 2^d−1+p`; mechanism rewritten to re-permuted
+> parity-indexed tables). A **new direction #11** was found, implemented on a scratch
+> copy, and measured: round-10's entire idx update plus the initial idx vloads are dead
+> code (−128 valu, −32 flow, −63 load, correctness OK on 3 seeds) — land it first.
+
+## Summary table (post-review)
 
 | # | Direction | Attack surface | Est (low–high) | Conf |
 |---|---|---|---|---|
-| 02-hash-opcount | Hash op-count reduction: defer stage-5 K5 into the node | alu-op-count / valu-op-count (lowers the comb | 1140–1185 | medium |
-| 03-round-structure | Parity-carry traversal: eliminate idx reconstruction on | algorithmic op-count reduction targeting the  | 1150–1225 | medium |
-| 10-autotuner | Global Multi-Knob Autotuner (SA + coordinate-descent ov | windup-drain + scheduler-suboptimality (the a | 1195–1226 | medium |
-| 09-data-layout | Depth-Interleaved SIMD Layout: fill windup/drain by mix | scheduler-suboptimality / windup-drain-drain  | 1180–1225 | low |
-| 01-exact-scheduler | Near-Optimal Scheduler via CP-SAT Modulo-Resource Sched | scheduler-suboptimality (primary) + windup-dr | 1180–1225 | low |
-| 04-modulo-pipeline | Principled Software Pipelining: Prologue/Steady-State/E | windup-drain (with a latency-wall component i | 1188–1218 | medium |
-| 06-regalloc-hazards | Scratch-as-op-count: dedicated registers to cut the com | alu-op-count / valu-op-count (the true combin | 1180–1228 | low |
-| 08-flow-vselect | Flow-engine relief: shrink/re-engine the vselect muxes | flow-engine / windup-drain (flow is the scarc | 1205–1228 | low |
-| 05-cross-vector-share | Cross-Vector Redundancy at Shallow Depths: attack the f | flow-engine (the 736 flow floor is 100% shall | 1195–1232 | low |
-| 07-load-engine-lut | LUT-offload to the LOAD engine (REFUTED as stated; salv | load-engine (claimed idle-middle) — MEASURED  | 1215–1230 | low |
+| 11-dead-code-idx **(NEW)** | Dead-idx elimination: round-10 traverse+wrap and idx vloads are dead code | valu/flow/load op-count (floor drop **measured**: −17 combined) | 1215–1230 | proven deletion; medium for standalone cycles |
+| 02-hash-opcount | Defer stage-5 K5 into node broadcasts (**corrected: 7 rounds, −224 valu**) | valu-op-count (binding floor 1176→1138.5) | 1180–1220 | medium-high |
+| 03-round-structure | Parity-carry traversal (**corrected: re-permuted tables keyed on raw parities**) | valu-op-count (binding floor) | 1170–1225 | medium |
+| 10-autotuner | Global Multi-Knob Autotuner (SA + coordinate-descent over the combine mask) | windup-drain + scheduler-suboptimality | 1195–1226 | medium |
+| 09-data-layout | Depth-Interleaved SIMD Layout: fill windup/drain by mixing depths | scheduler-suboptimality / windup-drain | 1180–1225 | low |
+| 01-exact-scheduler | CP-SAT modulo-resource scheduling over the drain tail | scheduler-suboptimality + windup-drain | 1180–1225 | low |
+| 04-modulo-pipeline | Prologue/Steady-State/Epilogue pipelining (Probe B caveat added) | windup-drain (latency-wall component) | 1188–1218 | medium |
+| 06-regalloc-hazards | Scratch-as-op-count (valuable as refutation of rename-to-parallelize) | alu/valu op-count | 1180–1228 | low |
+| 08-flow-vselect | Flow relief on depth-3 muxes (§3.3 wrap part superseded by #11) | flow-engine / windup-drain | 1205–1228 | low |
+| 05-cross-vector-share | Cross-vector redundancy at shallow depths | flow-engine (non-binding) | 1195–1232 | low |
+| 07-load-engine-lut | LUT-offload to LOAD engine (self-refuted; kept as documentation) | load-engine (non-binding) | 1215–1230 | low |
 
 ## Reviewer critique & ranking
 
@@ -58,26 +68,75 @@ This is the pragmatic capture-play for the entire windup/drain cluster: it subsu
 
 ---
 
-### Ranking, best-to-worst by expected value (payoff × probability)
+### Ranking, best-to-worst by expected value (payoff × probability) — REVISED AFTER SECOND-PASS REVIEW
 
-1. **#2 [02-hash-opcount]** — Only direction that moves the *binding floor* (~86-cycle headroom vs. everyone else's ~56 cap), medium confidence, and the core risk is a cheap paper-check away. Highest payoff × probability by a clear margin. **Do this first.**
+0. **#11 [11-dead-code-idx] (NEW) — land FIRST.** The only direction that is already
+   implemented and measured: deletions land exactly as predicted (−128 valu, −32 flow,
+   −63 load), correctness verified on 3 seeds. Effort is hours. Naive drop-in measured
+   1234 (stale head/tail knobs eat the floor drop — a live demonstration that floor drops
+   need a re-tune to cash out); even if the re-tune only recovers part of it, the lowered
+   floors are the base every other direction should stack on.
 
-2. **#3 [03-round-structure]** — Also attacks the binding valu floor, stacks with #2, medium confidence. Softer/wider estimate and an unproven identity keep it below #2, but the ceiling is high.
+1. **#2 [02-hash-opcount]** — Still the biggest single lever, but **corrected**: net
+   deletion is 224 valu ops (7 deferral rounds), not 512; floor drop is ~37 valu-floor
+   cycles / ~30 combined, not ~85. The gather path is provably net-zero — the selective
+   7-round variant is the final form, which also removes the output-fixup seam. The Day-1
+   guard in the original draft (`depth < 4`) was on the wrong variable and would have
+   produced a silently wrong kernel on rounds 3/14 — fixed to next-round depth.
 
-3. **#10 [10-autotuner]** — Best of the windup/drain cluster: subsumes the tuning of #1/#4, has an exact oracle, bounded downside, cheapest way to learn if the ~56-cycle tail is reachable at all. Payoff capped at 1174 but probability is real.
+2. **#3 [03-round-structure]** — Still second among floor-movers, but the original doc's
+   core identity was **false** (idx low bits are borrow-mixed parities, not parities;
+   verified 1536/1536 counterexamples) and its Day-1 script would have false-killed the
+   lane. Corrected mechanism: re-permute the broadcast tables to be indexed by raw parity
+   vectors via the verified invariant `idx == 2^d − 1 + p` (0/4096 violations). The
+   maintenance op disappears entirely (compile-time ring renaming), but scratch pressure
+   is now the primary risk (768 words naive vs 65 free).
 
-4. **#9 [09-data-layout]** — Most distinct mechanism in the tail cluster; genuinely orthogonal lever. Higher risk (correctness/lockstep) and lower confidence than #10, but not redundant with it, so worth keeping if #10 stalls.
+3. **#10 [10-autotuner]** — Unchanged assessment: best of the windup/drain cluster,
+   subsumes the tuning of #1/#4, exact oracle, bounded downside. **Note:** #11's re-tune
+   step is a miniature of this lane; if #11's manual sweep stalls, hand it to #10.
 
-5. **#1 [01-exact-scheduler]** — Right target, principled, but likely intractable/expensive for a capped payoff that #10 captures more cheaply. Fund only if #10 proves the gap is reachable but its heuristic can't close it.
+4. **#9 [09-data-layout]** — Unchanged: most distinct mechanism in the tail cluster.
 
-6. **#4 [04-modulo-pipeline]** — Largely the hand-built version of #1/#10, plus a self-admitted latency wall in the epilogue that caps the gain. Redundant given #10.
+5. **#1 [01-exact-scheduler]** — Unchanged: fund only if #10 proves the gap reachable but
+   can't close it.
 
-7. **#6 [06-regalloc-hazards]** — High value as a *refutation* (kills the rename-to-parallelize dead end), low value as a positive direction because it names no concrete op to cut. Keep the negative result, deprioritize the positive.
+6. **#4 [04-modulo-pipeline]** — Unchanged rank; a review caveat was added to Probe B
+   (its premise contradicts the already-swept tail=0 grid point — expect it to regress).
 
-8. **#8 [08-flow-vselect]** — Honest and narrowly scoped, but attacks a non-binding floor (736) and risks pushing load onto the binding valu/alu. Marginal, local, tail-only.
+7. **#6 [06-regalloc-hazards]** — Unchanged: keep the refutation, deprioritize the
+   positive claim.
 
-9. **#5 [05-cross-vector-share]** — #8's muddled twin: confuses a non-binding flow floor for a bottleneck, estimate range includes "no change," overlaps #8 without being sharper. Cut in favor of #8.
+8. **#8 [08-flow-vselect]** — §3.3 (wrap-as-multiply) superseded by #11 (the wrap is
+   dead code, deletion beats substitution). Remaining scope is depth-3-only; rank
+   unchanged.
 
-10. **#7 [07-load-engine-lut]** — Self-refuted headline; salvage attacks a floor (1098) below the binding constraint (1174). Author already did the hard work of showing it's dead. Bottom.
+9. **#5 [05-cross-vector-share]** — Unchanged: cut in favor of #8.
 
-**Bottom line:** Nine of ten proposals fight over the same ~56-cycle tail under a fixed 1174 floor and are differentiated only by mechanism — of those, fund exactly one capture-play (**#10**) plus one orthogonal backup (**#9**). The real money is in the two that *lower the floor* (**#2**, then **#3**); #2 should be the first thing anyone touches because its make-or-break question is answerable with pencil and paper before a line of code is written.
+10. **#7 [07-load-engine-lut]** — Unchanged: bottom, kept as documentation.
+
+**Bottom line (revised):** The floor-movers are now three, and they stack: **#11 (−17
+combined, proven, hours) → #2 (−30 combined, medium-high, 1-2 days) → #3 (−up to 64,
+medium, scratch-gated)**. Together they put the combined floor near ~1090-1118, which is
+worth more than everything the nine tail-fighters can collectively reach under the old
+1174 cap. Fund the tail cluster with exactly one capture-play (**#10**) run *after* the
+floor-movers land, since every mask/knob optimum shifts when the op profile changes.
+
+### Second-pass corrections (what changed and why)
+
+- **#2:** deferral validity depends on the *successor* round's node source; gather
+  successors cost +1 op each, cancelling those rounds. Net −224, floor 1176→1138.5
+  (verified by op-count arithmetic against the measured 7055-valu build). Day-1 recipe's
+  `if depth < 4` guard replaced with `(r+1) % h1 < 4` — the original produced a wrong
+  kernel on rounds 3/14.
+- **#3:** `idx&1 == pbits&1` fails on every shallow-round sample (complement at d1,
+  borrow-mixed at d2/d3). Verified invariant `idx == 2^d − 1 + p` substituted; mechanism
+  rewritten to parity-indexed re-permuted tables; Day-1 script replaced with one that
+  passes (already run: 0/4096).
+- **#4:** Probe B caveat (contradicts the swept grid; the "a0 v6" profile is of the tuned
+  optimum, not evidence against it).
+- **#8:** §3.3 superseded by #11.
+- **#11 (new):** round-10 idx update + initial idx vloads are dead code; wrap at depth 10
+  is additionally unconditional (256/256 wrap to 0). Implemented and measured on a scratch
+  copy: op deltas exact, correctness OK ×3 seeds, floors −17 combined; realized cycles
+  pending the head/tail re-sweep.

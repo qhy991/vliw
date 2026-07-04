@@ -111,7 +111,14 @@ In the depth-3 branch (perf_takehome.py lines 358-395), wrap each of the 7 `vsel
 
 ### 3.3 Secondary target: the wrap vselect (32 ops)
 
-The wrap (perf_takehome.py lines 445-449) is `idx = mask ? idx : 0`, i.e. `idx = mask * idx` since the false-branch is 0 and `mask ∈ {0,1}` (it's `idx < n_nodes`, line 446). This is a **pure multiply, no select needed at all**: replace the flow `vselect` with `self.v_alu("*", idx, addr, idx)` (1 valu/alu op, 0 flow). This removes all 32 wrap flow ops unconditionally and correctly, and round 10's wrap lands at ~cycle 700-800 — worth checking if it helps or if those bundles aren't flow-bound (if not, it's free insurance for later combined attacks). This is the single cleanest sub-change and should be done first.
+> **SUPERSEDED BY REVIEW — see `11-dead-code-idx`.** The wrap vselect is not merely
+> convertible to a multiply: the *entire* round-10 idx update (rem `%`, i2p1 muladd, add,
+> wrap `<`, wrap vselect) is **dead code**, because round 11 is depth 0 and never reads
+> idx. Deleting it (verified correct on 3 seeds, measured −128 valu −32 flow) strictly
+> dominates the multiply substitution below. Do not implement this subsection; land
+> `11-dead-code-idx` instead and treat this lane as depth-3-only.
+
+The wrap (perf_takehome.py lines 445-449) is `idx = mask ? idx : 0`, i.e. `idx = mask * idx` since the false-branch is 0 and `mask ∈ {0,1}` (it's `idx < n_nodes`, line 446). This is a **pure multiply, no select needed at all**: replace the flow `vselect` with `self.v_alu("*", idx, addr, idx)` (1 valu/alu op, 0 flow). This removes all 32 wrap flow ops unconditionally and correctly, and round 10's wrap lands at ~cycle 700-800 — worth checking if it helps or if those bundles aren't flow-bound (if not, it's free insurance for later combined attacks). ~~This is the single cleanest sub-change and should be done first.~~
 
 ### 3.4 Tertiary: depth-2 mux (192 ops)
 
@@ -140,7 +147,7 @@ cd /Users/haiyan-mini/Agent4Kernel/vliw && python tests/submission_tests.py   # 
 
 **Day-1 sequence (fastest kill/confirm):**
 
-1. **Wrap-as-multiply (Ā§3.3)** — one-line change, unconditional, definitely correct. Measure. This alone tells us whether *any* flow relief moves the needle at all. If removing 32 flow ops changes nothing, the pure-flow ceiling is ~7 cycles and the whole lane is capped low — that is a fast, cheap kill signal.
+1. ~~**Wrap-as-multiply (Ā§3.3)**~~ **superseded:** the round-10 wrap is dead code entirely (see `11-dead-code-idx`); its deletion is already measured (−32 flow among other things). Rebase this lane on top of that change; the "does removing 32 flow ops move anything" question is answered by that measurement (naive drop-in: floors fell, cycles did not — the tail knobs must be re-tuned).
 
 2. **Instrument before coding the mux change:** dump the binding histogram and per-bundle flow-sole-limiter set (script already validated this session) to see exactly *which cycles* the wrap change and each candidate select removal would land on. If the depth-3 tail selects don't overlap the `('flow',*)`-limited bundles, stop.
 

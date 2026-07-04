@@ -229,8 +229,14 @@ class KernelBuilder:
         # exactly, so it is always correctness-safe. Counts tuned by sweep.
         self._combine_no = 0          # combines emitted so far this rotation
         self._combine_total = 0       # total combines expected this rotation
-        self._combine_head = 20       # vectorize first N combine-instances
-        self._combine_tail = 120      # vectorize last N combine-instances
+        self._combine_head = 24       # vectorize first N combine-instances
+        self._combine_tail = 100      # vectorize last N combine-instances
+        # Sweep hooks (do NOT affect the default build). _rots restricts the
+        # rotation search to a subset (None = full range(K), the shipped
+        # behavior); _rot_cycles records per-rotation bundle counts so a driver
+        # can map the rotation landscape without a separate instrumented copy.
+        self._rots = None
+        self._rot_cycles = {}
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -783,9 +789,11 @@ class KernelBuilder:
             return ops
 
         best_body = None
-        for rot in range(K):
+        rot_iter = range(K) if self._rots is None else self._rots
+        for rot in rot_iter:
             rnd = gen_body(rot)
             bundles = Scheduler().schedule(prefix + rnd)
+            self._rot_cycles[rot] = len(bundles)
             if best_body is None or len(bundles) < len(best_body):
                 best_body = bundles
         body_start = len(self.instrs)

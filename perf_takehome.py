@@ -824,18 +824,27 @@ class KernelBuilder:
             "K5": self.broadcast_const("K5", Kc[5]),
             "sh19": self.broadcast_const("sh19", shc[1]),
             "sh16": self.broadcast_const("sh16", shc[5]),
-            "zero": self.broadcast_const("zero", 0),
         }
-        c["fvp_v"] = self.broadcast_const("fvp_v", FVP)
-        c["nn_v"] = self.broadcast_const("nn_v", n_nodes)
+        # #18.1/#18.2 idx-space-only consts: `zero` (wrap vselect + non-defer d0
+        # traverse), `fvp_v` (idx-space gather addr), `nn_v` (wrap compare) are
+        # all read only on `not self._pspace` paths -- both depth-0 rounds defer
+        # K5 in p-space, so the non-defer d0 traverse at :700 never fires. Skip
+        # the broadcasts in the p-space build (+24 scratch). PSPACE=0 guards the
+        # fallback. (`four` is NOT gated: it's read by the d3 mux in both spaces.)
+        if not self._pspace:
+            c["zero"] = self.broadcast_const("zero", 0)
+            c["fvp_v"] = self.broadcast_const("fvp_v", FVP)
+            c["nn_v"] = self.broadcast_const("nn_v", n_nodes)
         c["fh"] = forest_height
         # p-space gather setup (dir #12): the idx slot holds parity p, and
         # gather addr = fvp + idx = (fvp + 2^d - 1) + p. Fold the per-depth
         # constant fvp + 2^d - 1 into a broadcast fvp_p_d, so each gather round
         # is one add (addr = fvp_p_d + p). Only depths that actually gather need
-        # one -- depth>=4 always, depth 3 only under D3_GATHER_TAIL.
+        # one -- depth>=4 always, depth 3 only under D3_GATHER_TAIL. (#18.3:
+        # skip the dead fvp_p_3 broadcast when the d3 tail never gathers, +8.)
         if self._pspace:
-            for d in range(3, forest_height + 1):
+            d_lo = 3 if self._d3_gather_tail > 0 else 4
+            for d in range(d_lo, forest_height + 1):
                 c[f"fvp_p_{d}"] = self.broadcast_const(
                     f"fvp_p_{d}", FVP + (1 << d) - 1)
 

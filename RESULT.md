@@ -1,9 +1,9 @@
-# RESULT: Merged floor-movers — global best **1157**
+# RESULT: Merged floor-movers — global best **1156**
 
-**Branch:** `explore/15-s2s3-fusion`  
-**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1157** (127.69×)
+**Branch:** `explore/merged-floor`  
+**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1156** (127.80×)
 
-## #15 s2+s3 muladd fusion — LANDED (1174 → 1157, −17)
+## #15 s2+s3 muladd fusion — LANDED (1174 → 1157, −17; stacked w/ #18 → 1156)
 
 Fuse hash stages 2 and 3 into `2 muladd + 1 combine`. Both stage-3 operands are
 affine in the stage-1 output `a`: `t1 = u+K3 = a*33 + (K2+K3)` and
@@ -63,6 +63,28 @@ extract instances to shed to alu; the win is mostly tighter tail packing (gap
 `_EXTRACT_ALU_PSPACE_32x16` shipped default. Extracts are arithmetically identical
 on either engine, so correctness is untouched. See `champ_extract.json`.
 
+## #18 micro purges — LANDED (1174 → 1172 alone; stacked on #15 → 1156, −1; +34 scratch)
+
+Gate p-space-dead setup constants out of the PSPACE=1 build. Each is read only on
+`not self._pspace` paths, so removing the broadcast is free in p-space and
+`PSPACE=0` (unchanged at 1199) guards the idx-space fallback.
+
+- **18.1 `zero`**: both depth-0 rounds defer K5 (`defer_k5=True` for r=0,11), so
+  the non-defer d0 traverse `v_alu("+", idx, zero, addr)` never executes; the only
+  other consumer is the wrap vselect (`not self._pspace`-gated). +9 scratch.
+- **18.2 `fvp_v`/`nn_v`**: read only by the idx-space gather (`:509`) and wrap
+  compare (`:734`). +16 scratch. **Doc erratum:** `four` is NOT idx-space-only —
+  it's read by the depth-3 mux (`:630`) in both spaces, so it stays.
+- **18.3 `fvp_p_3`**: the per-depth gather const for depth 3 is dead when
+  `D3_GATHER_TAIL=0` (default: d3 uses the mux, never gathers). +8 scratch.
+
+Scratch: **16 → 50 words free**. On the 1174 graph: valu 6593→6589, load
+2141→2139 (−2 cycles setup-tail shrink). Stacked on #15 (1157): **1156** (−1 more;
+4 fewer vbroadcasts still help windup). **Skipped:** 18.4 (vaddr→
+add_imm moves load→flow but load isn't the p-space floor and frees no scratch),
+18.5 (setup-vec reuse is #16 landing-slot infra, no consumer here), full 18.3
+(broadcast→per-lane is co-bind currency, deferred to #17).
+
 ## #12 p-space traverse — LANDED (1208 → 1184, −24)
 
 Store parity `p` in the idx scratch slot (`idx == 2^d−1+p`). Deep-round traverse
@@ -101,6 +123,7 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | 14 | co-bind rebalance (300 valu combines) | 1179 | −5 cycles |
 | 15a | d2/d3 extract valu→alu (joint anneal) | 1174 | −5 cycles; tail-pack + 57 extracts→alu |
 | **15** | **s2+s3 muladd fusion + re-anneal** | **1157** | **−17 cycles; −512 valu → load-bound; 538 valu comb / 301 alu ex** |
+| **18** | **micro purges (zero/fvp_v/nn_v/fvp_p_3 gates)** | **1156** | **stacked −1; +34 scratch (16→50 free)** |
 | 10b | idx-space head/tail+mask re-sweep | 1190 | PSPACE=0 fallback only |
 
 ## Falsified on p-space graph
@@ -125,15 +148,16 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 3. Re-run `experiments/anneal_extract.py` after any op-count change (joint
    combine+extract+offset SA).
 
-**Ceiling (revised @ 1157):** load floor 1070.5 is the hard wall for the op-count
-route; realized **1157** already sits ~86 above it. Beating ~1130 needs the load
-floor itself to drop (fewer gathers) — valu/alu rebalance alone cannot.
+**Ceiling (revised @ 1156):** load floor 1070.5 is the hard wall for the op-count
+route; realized **1156** sits ~85 above it. Beating ~1130 needs the load floor
+itself to drop (fewer gathers) — valu/alu rebalance alone cannot. **#17 omni-anneal**
+is the mandatory re-tune pass to shrink the tail gap on this graph.
 
 ## Verify
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES: 1157 (PSPACE default 1)
+python tests/submission_tests.py   # OK, CYCLES: 1156 (PSPACE default 1)
 PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1190
 ```
 

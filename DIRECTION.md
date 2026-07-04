@@ -59,6 +59,25 @@ jump 1230-1240). The floors dropped exactly as computed; the schedule must be re
 ride the new floor. This is the live demonstration of the portfolio-wide caveat "a floor
 drop does not automatically convert to cycles."
 
+**First coarse re-sweep (10 configs, run during review) already recovers it:**
+
+```
+head=20 tail=120 -> 1228   <- NEW BEST (beats 1230)
+head=14 tail=110 -> 1229
+head=16 tail=130 -> 1230
+head= 6 tail= 80 -> 1231
+head=10 tail=100 -> 1234   (stale old optimum)
+head= 0 tail=100 -> 1237
+head=40 tail=200 -> 1255
+```
+
+The optimum moved exactly as predicted (more combines vectorized onto valu in the tails,
+since the deletion freed valu). Neighbors 1228/1229/1230 corroborate the region. The
+head/tail knob is correctness-free by construction (identical arithmetic, engine
+reassignment only), so 1228 stands pending the standard `submission_tests.py` gate. A
+finer grid around (20,120) — and a joint sweep with `step`/priority-key — is the obvious
+next step and may find a couple more cycles.
+
 ---
 
 ## 3. Mechanism: exactly what changes in `perf_takehome.py`
@@ -104,10 +123,10 @@ Already done during review (scratch copy at `/tmp/vliw_probe`, diffable against 
 
 Remaining (hours, not days):
 
-1. **Re-sweep `_combine_head × _combine_tail`** against the new op profile (the old
-   10/100 optimum is stale; first parallel probe of 10 configs was launched during review).
-   The op mix shifted valu-ward (valu floor fell 21 cycles while alu is unchanged), so
-   expect the new optimum to vectorize *more* combines, especially in the drain.
+1. **Re-sweep `_combine_head × _combine_tail`** — the coarse 10-config probe already ran
+   during review and found **(head=20, tail=120) → 1228 < 1230** with corroborating
+   neighbors (see §2). Refine the grid around (20,120) (e.g. head ∈ 16..28 × tail ∈
+   104..144 step 4) for a few more cycles.
 2. If no (head, tail) config beats 1230, sweep jointly with `step ∈ {2,4,8}` and the 5
    scheduler priority keys — the deletion changed the DAG shape near the drain, where the
    response surface is noisy.
@@ -148,12 +167,12 @@ the combined floor drop is what matters).
 ## 6. Expected payoff + confidence + effort
 
 - **Floor movement (measured):** valu 1175.8 → 1154.5; combined ~1165 → 1147.9.
-- **Realized cycles:** likely **1215-1228** after re-tune (floor drop −17, tail-limited
-  schedule captures part of it); worst case ~1230 with the floors banked for #2/#3 to
-  stack on.
+- **Realized cycles (measured):** **1228 at (head=20, tail=120)** from the first coarse
+  10-config re-sweep; likely **1220-1228** after a finer grid. The floors are banked for
+  #2/#3 to stack on regardless.
 - **Confidence the *deletion* is correct and floor-lowering: proven** (measured, 3-seed
-  correctness). **Confidence it beats 1230 standalone: medium** — gated purely on the
-  re-tune.
+  correctness). **Confidence it beats 1230 standalone: proven at the bundle-count level**
+  (1228 measured; final `submission_tests.py` gate still required as always).
 - **Effort: 0.5-1 day** (the implementation exists; port the 3 edits from
   `/tmp/vliw_probe/perf_takehome.py`, run the sweep, validate).
 

@@ -1,9 +1,42 @@
-# RESULT: Merged floor-movers — global best **1174**
+# RESULT: Merged floor-movers — global best **1157**
 
-**Branch:** `explore/merged-floor`  
-**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1174** (125.84×)
+**Branch:** `explore/15-s2s3-fusion`  
+**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1157** (127.69×)
 
-## Engine profile @ 1174 (PSPACE=1, shipped default)
+## #15 s2+s3 muladd fusion — LANDED (1174 → 1157, −17)
+
+Fuse hash stages 2 and 3 into `2 muladd + 1 combine`. Both stage-3 operands are
+affine in the stage-1 output `a`: `t1 = u+K3 = a*33 + (K2+K3)` and
+`t2 = u<<9 = a*16896 + (K2<<9)` where `u = a*33+K2`, so each is one muladd from
+`a` directly. This deletes 1 valu-locked op per (vec,round) = **−512 valu**
+(6593 → 6081; alu unchanged at 11960). Verified bit-exact vs `myhash` on 500k
+random inputs + `parity_check`/`algebra_check_ported`. Consts `K2/K3/sh9` retire;
+`K2K3=0xE9F8CC1D / m16896=0x4200 / K2S9=0xACCF6200` are born (net scratch 0).
+
+The floor math flipped the binding engine: valu 6081/6 = **1013.5** now sits
+below **load 2141/2 = 1070.5**, which becomes the hard floor. A joint
+(combine, extract, offset) re-anneal (`experiments/anneal_extract.py`, warm-start
+from the #14/#15 champs) repacks to realize the drop — combines 300→538 valu,
+extracts 57→301 on alu, new offset vector — landing **1157** (load 1070.5 + tail
+gap ≈ 86). `champ_extract.json` updated. PSPACE=0 fallback also improved
+1199 → 1190 (fusion helps the idx-space graph too).
+
+## Engine profile @ 1157 (PSPACE=1, shipped default)
+
+```
+valu:  6081 ops / 6 = 1013.5
+alu:  11960 ops /12 =  996.7
+load:  2141 ops / 2 = 1070.5   <- now binding
+flow:   704 ops / 1 =  704.0
+store:   32 ops / 2 =   16.0
+combined load binding ≈ 1071  |  realized 1157  |  tail gap ≈ 86
+```
+
+**Binding flipped again after #15:** valu (1013.5) dropped below load (1070.5);
+load is now the sole binding floor. Further valu deletion is absorbed — the next
+prize is the load floor and the ~86-cycle tail gap.
+
+## Prior engine profile @ 1174 (PSPACE=1)
 
 ```
 valu:  6593 ops / 6 = 1098.8
@@ -66,8 +99,9 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | 03 ph.1 | depth-1 parity-carry (`rem` vselect) | 1208 | −64 valu, absorbed |
 | 12 | p-space traverse + re-sweep | 1184 | −248 valu; −24 cycles |
 | 14 | co-bind rebalance (300 valu combines) | 1179 | −5 cycles |
-| **15** | **d2/d3 extract valu→alu (joint anneal)** | **1174** | **−5 cycles; tail-pack + 57 extracts→alu** |
-| 10b | idx-space head/tail+mask re-sweep | 1199 | PSPACE=0 fallback only |
+| 15a | d2/d3 extract valu→alu (joint anneal) | 1174 | −5 cycles; tail-pack + 57 extracts→alu |
+| **15** | **s2+s3 muladd fusion + re-anneal** | **1157** | **−17 cycles; −512 valu → load-bound; 538 valu comb / 301 alu ex** |
+| 10b | idx-space head/tail+mask re-sweep | 1190 | PSPACE=0 fallback only |
 
 ## Falsified on p-space graph
 
@@ -81,23 +115,26 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 
 ## Remaining levers (ranked)
 
-1. **structural valu-op deletion** — floor barely moved (1099→1099); #15 was a
-   packing/rebalance win, so the ~75-cycle tail gap and the 1099 floor are still
-   the two prizes. #03 phase-2 (d2/d3 re-permuted parity tables, −320 valu) needs
-   scratch first.
-2. **scratch liveness** — partial phase-2 if words free up.
+1. **load floor (1070.5) is now binding** — after #15's −512 valu, valu (1013.5)
+   dropped below load, so further valu-op deletion is absorbed. The two prizes
+   are now the **load floor** (2141 loads/rotation = 8 scalar gathers/deep-round)
+   and the **~86-cycle tail gap**. Reducing gathers (vectorized depth-≥2 loads,
+   or fewer deep rounds) is the new highest-value structural lever.
+2. **tail-gap shrink** — windup/drain packing; the re-anneal took gap 75→86 as it
+   traded valu for tighter load packing, so there may be offset headroom left.
 3. Re-run `experiments/anneal_extract.py` after any op-count change (joint
    combine+extract+offset SA).
 
-**Ceiling (op-count route, revised @ 1174):** co-bind floor ≈ 1079 → realized
-optimistic **1125–1145**; **1100** needs new structural wins + tail-gap shrink.
+**Ceiling (revised @ 1157):** load floor 1070.5 is the hard wall for the op-count
+route; realized **1157** already sits ~86 above it. Beating ~1130 needs the load
+floor itself to drop (fewer gathers) — valu/alu rebalance alone cannot.
 
 ## Verify
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES: 1174 (PSPACE default 1)
-PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1199
+python tests/submission_tests.py   # OK, CYCLES: 1157 (PSPACE default 1)
+PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1190
 ```
 
 ## Env knobs

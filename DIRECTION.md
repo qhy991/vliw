@@ -1,14 +1,36 @@
 # Direction: Parity-Carry Traversal — kill idx reconstruction on shallow rounds
 
+> **REVIEW CORRECTION (verified against `reference_kernel2` traces, 256 elem × 16 rounds):
+> the original identity as stated is FALSE and its Day-1 script would have falsely killed
+> the direction.** The claim "idx's low bits ARE the accumulated parity bits" fails on
+> 1536/1536 shallow-round samples. The true relationship involves an offset: with the
+> parity accumulator `p` (`p ← 2p + rem`, reset to 0 after the bottom wrap), the verified
+> invariant is
+>
+> ```
+> idx == 2^d − 1 + p        (0 violations in 4096 round-element samples)
+> ```
+>
+> so idx's low d bits are `(p − 1) mod 2^d`, which differs from `p` by a **borrow chain**:
+> at depth 1 the bit is the *complement* of the parity; at depth 2/3 higher bits are
+> XNOR-like mixtures (e.g. d2 bit1 = ¬(rem0 XOR rem1)), NOT individual parity bits.
+> Feeding raw parity bits to the existing vselect conditions is therefore wrong.
+> **The direction survives in a corrected form:** key the vselect tournament on the parity
+> bits *directly* and re-permute the broadcast table so position `p` holds
+> `tree[2^d − 1 + p]` — the mapping parity-bits→node is still a bijection, so no extract
+> or reconstruction is needed at all. Details in §3 (rewritten).
+
 ## 1. Direction name + one-line thesis
 
-**Parity-carry traversal.** The hash is nonlinear, so fusing rounds or precomputing early
-hashes is algebraically impossible — but the depth cycle means the node-select conditions on
-shallow rounds (`idx&1`, `idx&2`, `idx&4`) are *exactly* the recent branch-parity bits that
-`val % 2` already emits. Carry the parity bits directly instead of reconstructing the full
-`idx` integer and re-extracting its low bits, deleting the `i2p1` muladd and the `&`-extract
-ops on the 6 shallow non-final rounds. This removes ops from the **binding valu floor**, which
-lowers the floor itself rather than merely relocating work.
+**Parity-carry traversal (corrected).** The hash is nonlinear, so fusing rounds or
+precomputing early hashes is algebraically impossible — but the depth cycle means the node
+at a shallow round is fully determined by the recent branch parities: `node = tree[2^d−1+p]`
+where `p` is the accumulated parity value. Key the node-select tournament on the individual
+parity vectors (`rem = val%2`, already computed every round) against a **re-permuted
+broadcast table**, instead of reconstructing the full `idx` integer and extracting its low
+bits. This deletes the `&`-extract valu ops (and, where the successor never reads `idx`,
+the `i2p1` muladd) from the **binding valu floor**, lowering the floor itself rather than
+merely relocating work.
 
 ---
 
@@ -46,17 +68,19 @@ round  7 d7: gather             round 15 d4: gather (idx update skipped)
 ```
 
 The shallow, non-gather rounds are exactly `{0,1,2,3, 11,12,13,14}`. On these the node is
-picked by a `vselect` tournament keyed on the **low bits of idx**. Those low bits are precisely
-the parity choices (`rem = val%2`) accumulated over the last few rounds:
+picked by a `vselect` tournament keyed on the **low bits of idx**. The corrected algebra
+(verified, see header):
 
-- After a wrap-to-0 (rounds 0 and 11), `idx=0`. Then
-  `idx_{d1} = 1 + rem0` → low bit = `rem0`.
-  `idx_{d2} = 2*idx_{d1} + 1 + rem1` → `idx&1 = rem1`, `(idx>>1)&1 = rem0`.
-  `idx_{d3}` low 3 bits = `(rem0, rem1, rem2)`.
-- So the vselect conditions `idx&1 / idx&2 / idx&4` at depth `d` are just the last `d` parity
-  bits, in a fixed order. **We already compute `rem = val%2` every round** (the traverse step).
-  The `&`-extracts and the `i2p1 = 2*idx+1` muladd that rebuild `idx` purely to re-derive those
-  same bits are redundant on the shallow rounds.
+- After a wrap-to-0 (rounds 0 and 11), `idx=0`, `p=0`. Then with `p ← 2p + rem` each round,
+  `idx_{depth d} = 2^d − 1 + p` exactly (0/4096 trace violations). Examples:
+  `idx_{d1} = 1 + rem0` → low bit = `¬rem0` (complement, NOT `rem0`);
+  `idx_{d2} = 3 + 2·rem0 + rem1` → `idx&1 = ¬rem1`, `(idx>>1)&1 = ¬(rem0 XOR rem1)`.
+- So idx's low bits are borrow-mixed parities — you cannot substitute parity bits into the
+  *existing* conditions. But the node is a pure function of `p`: `node = tree[2^d−1+p]`.
+  **Re-permute the broadcast table to be indexed by `p`'s bits** (i.e. by the raw parity
+  vectors `rem_{r-1}, rem_{r-2}, rem_{r-3}`, all already computed as `val%2` in the traverse)
+  and the `&`-extracts plus the `i2p1 = 2*idx+1` muladd that rebuild `idx` purely to
+  re-derive select conditions become redundant on the shallow rounds.
 
 **Op-count budget (candidate removals):**
 
@@ -85,54 +109,54 @@ All edits are in `KernelBuilder._emit_vec_round` (lines 321–449) and its per-v
 `mem[inp_values_p:...]` matching `reference_kernel2`, and `idx` is NOT checked (confirmed in
 `do_kernel_test`, lines 776–783, and by the `skip_idx_update` path already in the code).
 
-### 3.1 Add a per-vector parity register `pbits`
+### 3.1 Keep the recent `rem` vectors alive instead of an accumulator (CORRECTED)
 
-In the per-vector scratch loop (lines 618–632), add one vector `pbits` per vector:
+A packed `pbits` accumulator is useless for the vselects: the conditions need *individual*
+bits, and extracting a bit from a packed accumulator costs the same `&` op we are trying to
+delete. Instead, keep the last up-to-3 **raw parity vectors** alive. `rem = val % 2` is
+already computed every round into the recycled `addr` temp (line 432); redirect it into a
+small ring of dedicated vectors:
 
 ```python
-entry["pbits"] = self.vec(f"{p}_pbits")   # holds accumulated recent parity bits
+entry["rem0"] = self.vec(f"{p}_rem0")   # parity of round r-1 (newest)
+entry["rem1"] = self.vec(f"{p}_rem1")   # parity of round r-2
+entry["rem2"] = self.vec(f"{p}_rem2")   # parity of round r-3 (only live rounds 2-3, 13-14)
 ```
 
-Scratch budget: +1 vec (8 words) × K_VEC=32 = 256 words. Current build uses well under
-`SCRATCH_SIZE=1536`; verify headroom on Day 1 (see §7). If tight, `pbits` can overlap the
-`addr` scratch on shallow rounds since `addr` is a scratch temp freed after node-select.
+Scratch budget: +3 vec (24 words) × K_VEC=32 = **768 words naive — does NOT fit** (current
+use 1471/1536, 65 free). This forces overlap: the rem history is only consumed during the
+shallow window (rounds 0–3 and 11–14), during which the gather-only temps are dead; and
+`rem0` can simply *be* the existing `rem` write target. A workable layout: 1 extra vec per
+vector (+256 words) with the other two slots overlapping `node`/`addr` lifetimes — this is
+the fiddliest part of the direction and must be planned before coding (see §5 risk 4).
 
-### 3.2 Maintain `pbits` cheaply from the `rem` we already compute
+### 3.2 Zero-cost maintenance
 
-Today the traverse computes `rem = val % 2` (line 432) then rebuilds `idx`. Change the shallow
-rounds so that instead of (or in addition to) reconstructing `idx`, we shift the new parity in:
+No shift-register op is needed at all: "maintenance" is just *writing this round's `rem`
+into a different slot of the ring* (rotate the role of the 3 vectors by round index at
+emission time — a compile-time renaming, zero runtime ops). This is strictly cheaper than
+the original draft's `pbits = 2*pbits + rem` muladd (which would have cost 1 valu/round).
 
-```
-pbits_new = (pbits << 1) | rem      # low bit = most recent parity
-```
+### 3.3 Re-permute the broadcast tables and key the vselects on raw parities (CORRECTED)
 
-`<<` and `|` are elementwise `valu`/`alu` ops. Crucially, `rem` (`val%2`) is *already* emitted,
-so the marginal cost is one `<<`+`|` (or a single `multiply_add(pbits,2, rem)` — 1 valu op)
-per shallow round. We are trading: **delete** `i2p1` muladd (1 valu) + node-select `&`-extracts
-(1–3 valu) → **add** one parity-update (1 valu). Net negative on shallow rounds.
+The existing conditions (`idx&1`, `idx&2`, `idx&4`, `4<idx`) CANNOT be replaced by parity
+bits one-for-one (borrow mixing — see header). Instead, use `node = tree[2^d − 1 + p]`
+with `p = Σ 2^k·rem_{d-1-k}` and re-order the broadcast table by `p`:
 
-### 3.3 Rewrite shallow-round node-select to key off `pbits` directly
+- **depth 1** (line 336): today `mask = idx&1` selects `nb1` vs `nb2`. In parity space
+  `p = rem0`, node = `tree[1 + p]`: emit `vselect(node, rem0, nb2, nb1)` (branches swapped
+  vs. the idx&1 version, since idx&1 = ¬rem0). The `&` (1 valu) is **deleted**.
+- **depth 2** (lines 347–357): node = `tree[3 + p]`, `p = 2·rem0 + rem1 ∈ {0..3}`.
+  Tournament: level 1 on `rem1` (newest), level 2 on `rem0`, over broadcasts ordered
+  `tree[3],tree[4],tree[5],tree[6]` indexed by `p`. Deletes the `&` and the `<` (2 valu).
+- **depth 3** (lines 369–395): node = `tree[7 + p]`, `p = 4·rem0 + 2·rem1 + rem2 ∈ {0..7}`.
+  Re-order the `d3_*` broadcast permutation (`d3_order`, line 590) so position `p` holds
+  `tree[7+p]`, and run the same 7-vselect tournament keyed on `rem2/rem1/rem0`. Deletes
+  all 3 `&` extracts (3 valu per vec-round).
 
-In `_emit_vec_round`, the `depth == 1/2/3` branches (lines 331–395) currently do
-`self.v_alu("&", addr, idx, one_v)` etc. Replace with reads of `pbits`:
-
-- **depth 1** (line 336): condition is `pbits & 1` (the single most-recent parity). If we keep
-  `pbits`'s low bit as that parity, the `&` may still be needed — but we can arrange the
-  vselect to read `pbits` bit0 without a separate extract if we instead maintain a dedicated
-  1-bit `rem` vector (which is `val%2`, already computed) and feed it straight to `vselect`.
-  Net: the depth-1 `&` (line 336) is *deleted* — the vselect condition becomes the existing
-  `rem` vector.
-- **depth 2** (lines 347–357): conditions `odd = idx&1` and `hi = (4<idx)`. `odd` = the newest
-  parity (`rem` of the previous round) — reuse it, delete the `&`. `hi` distinguishes
-  idx∈{5,6} from {3,4}, which is the *second* parity bit — read `pbits` bit1 (one extract, or
-  keep the two parities in two 1-bit vectors to avoid it). Net: delete 1–2 valu.
-- **depth 3** (lines 369–395): three conditions `b0,b1,b2` = the three most recent parities.
-  These are exactly `pbits` bits 0/1/2. Keep three 1-bit parity vectors (`rem` at rounds r-1,
-  r-2, r-3) and feed them to the vselect tournament directly. Net: delete all 3 `&` extracts
-  (lines 369, 384, 392) → 3 valu removed per depth-3 (vec,round).
-
-The vselect tournament flow ops themselves (lines 371–395) are unchanged — they stay on the
-**flow** engine, which has 494 slots of headroom, so absorbing any extra select is free.
+The vselect tournament flow ops themselves are unchanged — they stay on the **flow**
+engine, which has ~494 slots of headroom. The broadcast tables are setup-only re-orderings
+(zero new runtime ops).
 
 ### 3.4 Keep the full `idx` integer ONLY where needed
 
@@ -155,20 +179,26 @@ secondary, smaller win only on rounds whose successor never needs `idx` — audi
 
 ### 3.5 Correctness anchor
 
-`pbits`/`rem` must reproduce the exact vselect condition each depth uses today. Because the
-existing code already *works* using `idx & mask`, and `idx`'s low bits provably equal the
-accumulated parities (§2), the substitution is bit-identical. Validate against
-`reference_kernel2` (which is bit-exact) — not by reasoning.
+The substitution is NOT bit-identical at the condition level (idx low bits ≠ parity bits);
+it is *node-identical* via the invariant `node = tree[2^d − 1 + p]` and the re-permuted
+tables. The invariant is verified on reference traces (0/4096 violations), but every table
+permutation and branch order must be validated against `reference_kernel2` (bit-exact) —
+not by reasoning. A single swapped branch produces wrong nodes on ~half the lanes.
 
 ---
 
 ## 4. Day-1 experiment (smallest thing to validate or kill fast)
 
-**Goal: prove the parity-bits equal the idx low-bits at every shallow round, in the real trace,
-before touching op emission.** This is a pure correctness/structure check with zero scheduling
-risk.
+**Goal: prove the corrected invariant `idx == 2^d − 1 + p` at every round, in the real
+trace, before touching op emission.** This is a pure correctness/structure check with zero
+scheduling risk.
 
-Step A — dump the trace and confirm the algebra on real data:
+> The original draft's Step A asserted `idx & mask == pbits & mask` — that assertion
+> **fails on 1536/1536 shallow-round samples** (the bits are borrow-mixed, see header) and
+> would have falsely killed a viable direction. Use the corrected check below (already run
+> once during review: **passes, 0/4096 violations**).
+
+Step A — dump the trace and confirm the corrected algebra on real data:
 
 ```bash
 cd /Users/haiyan-mini/Agent4Kernel/vliw
@@ -181,28 +211,22 @@ mem = build_mem_image(f, inp)
 tr = {}
 for _ in reference_kernel2(mem, tr): pass
 h1 = 11
-# For each element, rebuild pbits from rem = val%2 and check it matches idx low bits
 bad = 0
 for i in range(256):
-    pbits = 0
+    p = 0
     for r in range(16):
         d = r % h1
         idx = tr[(r, i, "idx")]
-        if d == 1: assert (idx & 1) == (pbits & 1), (r,i)
-        if d == 2:
-            assert (idx & 1) == (pbits & 1) and ((idx>>1)&1) == ((pbits>>1)&1), (r,i)
-        if d == 3:
-            for b in range(3):
-                assert ((idx>>b)&1) == ((pbits>>b)&1), (r,i,b)
-        rem = tr[(r, i, "hashed_val")] % 2
-        pbits = (pbits << 1) | rem
-print("parity-carry algebra holds for all 256 elements x shallow rounds")
+        if idx != (1 << d) - 1 + p: bad += 1
+        rem = tr[(r, i, "hashed_val")] & 1
+        p = 0 if d == 10 else (2 * p + rem)   # reset after the bottom wrap
+print("invariant idx == 2^d-1+p violations:", bad, "/ 4096")   # expect 0
 PY
 ```
 
-If this asserts cleanly, the algebraic core is proven on real data and the whole lane is viable.
-If it fails, the direction is **dead on Day 1** (the bit ordering / wrap interaction is wrong)
-— cheap kill.
+If this prints 0, the algebraic core is proven on real data and the corrected lane
+(§3.3 table re-permutation) is viable. If it fails, the wrap/reset logic is wrong — cheap
+kill.
 
 Step B — implement only the **depth-3 `&`-extract removal** (the biggest single chunk: 192 valu
 ops), leaving everything else identical, then measure:
@@ -233,21 +257,26 @@ the `i2p1` audit.
    early (windup) and `{12,13,14}` are late-ish — a mix. Day-1 Step B measures this directly.
 
 2. **Parity update reintroduces valu ops.** Each `pbits` maintenance is ~1 valu op/round; if we
-   pay it on all 16 rounds but only save on 6, the net could be small or negative. Mitigation:
-   only maintain `pbits` where consumed (rounds feeding a shallow select), and fold the update
-   into the `rem` computation (`rem` already exists) so the marginal op is `multiply_add(pbits,
-   2, rem)` = 1 valu replacing a `<<`+`|`.
+   pay it on all 16 rounds but only save on 6, the net could be small or negative.
+   **RESOLVED BY REVIEW:** the corrected mechanism (§3.1-3.2) needs no accumulator and no
+   maintenance op at all — the ring of raw `rem` vectors is rotated by compile-time renaming
+   (zero runtime ops). This risk is retired; the residual cost is scratch, not ops (risk 4).
 
-3. **`idx` still needed for gathers/wrap.** We cannot stop computing `idx` entirely — depth≥4
-   rounds gather at `fvp+idx`, and round 10 wraps. So the `i2p1` muladd removal is only valid on
-   the narrow set of rounds whose successor never reads `idx`. Over-aggressive removal breaks
-   the gather addresses → wrong `val` → correctness failure. The *robust* win is confined to the
+3. **`idx` still needed for gathers.** We cannot stop computing `idx` entirely — depth≥4
+   rounds gather at `fvp+idx`. So the `i2p1` muladd removal is only valid on the narrow set
+   of rounds whose successor never reads `idx`. Over-aggressive removal breaks the gather
+   addresses → wrong `val` → correctness failure. The *robust* win is confined to the
    `&`-extracts (384 ops); the muladd win is a bonus requiring careful per-round auditing.
+   Note: review found round 10's entire idx update (traverse + wrap) is dead code
+   independent of this direction — see `11-dead-code-idx`, which should land first and
+   shrinks this direction's remaining muladd surface.
 
-4. **Scratch pressure.** +256 words for `pbits` (or three 1-bit parity vectors ×32 = up to 768
-   words if done naively). Must confirm `scratch_ptr <= 1536`. Mitigation: reuse the freed
-   `addr` temp, or store parities packed in one `pbits` vector (8 words/vec) and extract with
-   `>>`+`&` on flow/alu (idle engines), not valu.
+4. **Scratch pressure — now the PRIMARY risk.** Three raw parity vectors per vector = 768
+   words naive, but only **65 words are free** (measured: 1471/1536). The design must
+   overlap the rem ring with temps that are dead during the shallow window (`node`/`addr`
+   between rounds, gather-only temps), or accept keeping only 1-2 history vectors and
+   retaining one `&`-extract at depth 3. This is a live-range puzzle and the most likely
+   place the direction stalls; plan the layout on paper before coding.
 
 5. **Bit-order / wrap subtlety.** After wrap at round 10 (idx→0), the parity history must reset
    for the depth-cycle restart at round 11. Day-1 Step A tests exactly this across the wrap
@@ -267,10 +296,11 @@ the `i2p1` audit.
   plus a few `i2p1` removals, minus parity-maintenance and packing losses.
 - **Likely (high):** ~1215–1225 — depth-3 removal lands a real but modest cut; depth-1/2 and
   muladd removals are marginal after parity-maintenance overhead.
-- **Confidence it beats 1230 at all: medium.** The algebra is provable (Day-1 Step A is a
-  near-certain pass), so ops *will* be removed correctly; the uncertainty is entirely whether
-  those ops sat in packed regions (real cycle win) vs. idle tails (no win). This is exactly what
-  the notes flag as the crux, and only Step B resolves it.
+- **Confidence it beats 1230 at all: medium.** The corrected algebra is proven on reference
+  traces (0/4096 violations — review already ran Step A), so ops *can* be removed correctly;
+  the uncertainty is (a) whether the scratch live-range puzzle (risk 4) admits a full 3-vector
+  rem ring, and (b) whether the removed ops sat in packed regions (real cycle win) vs. idle
+  tails (no win). Only Step B resolves (b).
 - **Effort: 2–4 days.** Day 1: algebra proof + depth-3 removal + measure (kill/continue gate).
   Day 2: depth-1/2 removals, parity-maintenance folding, scratch layout. Day 3–4: `i2p1`
   per-round audit, re-tune the existing head/tail combine sweep (§4.1 of notes) against the new

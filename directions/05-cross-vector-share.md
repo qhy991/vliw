@@ -1,5 +1,8 @@
 # Direction: Cross-Vector Redundancy at Shallow Depths
 
+> **VERDICT: DEPRECATED (July 2026).** flow (704) is not the binding floor; valu+alu co-bind
+> at ~1111. Overlaps #08. Archive only.
+
 ## 1. Direction name + one-line thesis
 
 **Name:** Collapse the shallow-depth node-acquisition muxes (attack the flow floor), NOT the hash.

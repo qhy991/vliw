@@ -5,3 +5,5 @@ trace.json
 .claude/
 explore/
 directions/
+debug.log
+.kersor/

@@ -1,5 +1,9 @@
 # Direction: Scratch-as-op-count — spend registers to cut the combined ALU+vALU floor, not to break false deps
 
+> **VERDICT: DEPRECATED as positive direction (July 2026).** Refutation retained: rename-to-
+> parallelize disproved (critical path = 2). No unnamed op-count win identified at 1208.
+> Archive only.
+
 > **Working dir:** `/Users/haiyan-mini/Agent4Kernel/vliw` · **Target file (only editable):** `perf_takehome.py` · **Current best:** 1230 cycles (fixed shape `forest_height=10, rounds=16, batch=256`, `n_groups=1` ⇒ `cycles == len(kb.instrs)`).
 
 ---

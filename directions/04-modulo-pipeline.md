@@ -1,5 +1,10 @@
 # Direction: Principled Software Pipelining — Prologue / Steady-State / Epilogue with Compressed-Tail Release
 
+> **VERDICT: DEPRECATED (July 2026).** Attacks the same windup/drain gap as #10 (per-position
+> offset) and #01 (CP-SAT). Offset search on the 1208 graph captured the repacking prize;
+> CP-SAT proved ≤3 cycles remain in scheduling. Do not fund unless a new op graph changes the
+> middle-band profile. Kept as archive / Probe B refutation.
+
 > **Thesis (one line):** Replace the ad-hoc *uniform* diagonal emission in `gen_body` with an explicit prologue / steady-state / epilogue modulo schedule whose **per-block release delays are non-uniform** — front-loaded so both engines fill by ~cycle 8 instead of cycle 20, and back-**compressed** so the last vectors' serial hash-recurrence drains overlap each other instead of decaying `v6→v0` over 21 cycles. This attacks the ~29-cycle windup+drain gap over the 1174 combined-throughput floor.
 
 ---

@@ -1,5 +1,16 @@
 # Direction: Parity-Carry Traversal — kill idx reconstruction on shallow rounds
 
+> **STATUS @ 1208 (July 2026)**
+>
+> | Phase | Scope | Result |
+> |---|---|---|
+> | **phase-1** | depth-1: `vselect` on `rem_{r-1}` | **LANDED** in merged-floor; −64 valu, **0 cycles** (schedule absorbed) |
+> | **phase-2** | depth-2/3: re-permuted `tree[2^d−1+p]` tables | **BLOCKED** — rem history needs +256…768 scratch; only **88 words** free |
+> | **p-space (#12)** | store `p` not `idx`; traverse muladd | **ACTIVE** — orthogonal to phase-2; try first (zero scratch) |
+>
+> **Scratch unlock:** mem spill (#13) — store engine 1.3% utilized; vstore rem ring to
+> mem high addresses, vload in shallow window. See `directions/12-pspace-traverse.md`.
+>
 > **REVIEW CORRECTION (verified against `reference_kernel2` traces, 256 elem × 16 rounds):
 > the original identity as stated is FALSE and its Day-1 script would have falsely killed
 > the direction.** The claim "idx's low bits ARE the accumulated parity bits" fails on

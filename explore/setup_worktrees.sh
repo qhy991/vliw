@@ -1,44 +1,55 @@
 #!/usr/bin/env bash
-# Sets up 10 isolated git worktrees, one per optimization direction, each on its
-# own branch off the current best (c26f78b / opt/structural-search). Each worktree
-# gets a copy of its direction doc. Idempotent-ish: skips worktrees that already exist.
+# Create explore/* worktrees on a fresh clone. Idempotent.
+# Usage: ./explore/setup_worktrees.sh
 set -euo pipefail
 
-REPO="/Users/haiyan-mini/Agent4Kernel/vliw"
-WT_ROOT="$REPO/explore"          # worktrees live here (gitignored-friendly location)
-BASE_COMMIT="c26f78b"            # current best: 1230 cycles
-cd "$REPO"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-mkdir -p "$WT_ROOT"
+git fetch origin 2>/dev/null || true
 
-# Direction keys (must match the authored docs' filenames in directions/)
-KEYS=(
-  01-exact-scheduler
-  02-hash-opcount
-  03-round-structure
-  04-modulo-pipeline
-  05-cross-vector-share
-  06-regalloc-hazards
-  07-load-engine-lut
-  08-flow-vselect
-  09-data-layout
-  10-autotuner
+WORKTREES=(
+  explore/01-exact-scheduler
+  explore/02-hash-opcount
+  explore/03-round-structure
+  explore/04-modulo-pipeline
+  explore/05-cross-vector-share
+  explore/06-regalloc-hazards
+  explore/07-load-engine-lut
+  explore/08-flow-vselect
+  explore/09-data-layout
+  explore/10-autotuner
+  explore/11-dead-code-idx
+  explore/merged-floor
 )
 
-for k in "${KEYS[@]}"; do
-  wt="$WT_ROOT/$k"
-  branch="explore/$k"
-  if git worktree list | grep -q "$wt"; then
-    echo "SKIP (exists): $wt"
-    continue
+add_worktree() {
+  local path="$1"
+  local branch="explore/$(basename "$path")"
+  if [[ -d "$path" ]] && [[ -f "$path/.git" || -f "$path/.git" ]]; then
+    echo "skip $path (exists)"
+    return 0
   fi
-  # create branch off the current best if it doesn't exist
-  if ! git show-ref --verify --quiet "refs/heads/$branch"; then
-    git branch "$branch" "$BASE_COMMIT"
+  if [[ -d "$path" ]]; then
+    echo "skip $path (directory exists, not a worktree?)"
+    return 0
   fi
-  git worktree add "$wt" "$branch"
-  echo "CREATED: $wt on $branch"
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    git worktree add "$path" "$branch"
+  elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    git worktree add -b "$branch" "$path" "origin/$branch"
+  else
+    echo "warn: no branch $branch — skip $path" >&2
+  fi
+}
+
+echo "==> worktrees under $ROOT"
+for wt in "${WORKTREES[@]}"; do
+  add_worktree "$wt"
 done
 
-echo "=== worktrees ==="
 git worktree list
+
+echo ""
+echo "Global best: explore/merged-floor (expect CYCLES: 1208)"
+echo "Docs: directions/INDEX.md"

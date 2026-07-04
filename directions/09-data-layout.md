@@ -1,5 +1,10 @@
 # Direction: Depth-Interleaved SIMD Layout
 
+> **VERDICT: DEPRECATED (July 2026).** Same windup/drain target as #04 and #10. Per-position
+> offset (`_POS_OFFSET_32x16`) already found a strongly non-uniform emission order (1230→1208).
+> CP-SAT shows the middle band [200–1000] is triple-saturated — depth-mixing cannot help there.
+> Archive only.
+
 ## 1. Direction name + one-line thesis
 
 **Depth-Interleaved SIMD Layout (round-phase staggering of the batch).**

@@ -1,5 +1,8 @@
 # Direction: LUT-offload to the LOAD engine
 
+> **VERDICT: DEPRECATED (July 2026, self-refuted).** load floor (1066) below binding alu+valu
+> (~1111). Gather-reduction marginal on 1208 graph. Archive only.
+
 > Assigned lane: "Offload ALU work onto the idle LOAD engine (floor 1098, ~132 cycles of
 > slack vs 1230). Precompute a partial hash LUT in memory at SETUP, then at runtime replace
 > some ALU/valu hash work with a LUT load."

@@ -1,5 +1,14 @@
 # Direction: Near-Optimal Scheduler via CP-SAT Modulo-Resource Scheduling over Macro-Round Windows
 
+> **VERDICT: FALSIFIED (July 2026).** CP-SAT on the drain tail proved greedy scheduling is
+> within **≤1 cycle** of optimal; 99% of bundles have an engine saturated. The direction body
+> is dead for further investment.
+>
+> **Byproduct harvested:** drain-tail depth-3 mux→gather (`_d3_gather_tail`, `_gather_node`).
+> Ported to `explore/merged-floor`; on the 1208 graph default **off** (1211 regression at
+> tail=8 without combine re-sweep). Re-test with `D3_GATHER_TAIL` × `COMBINE_TAIL` grid.
+> See `explore/merged-floor/RESULT.md`.
+
 ## 1. Direction name + one-line thesis
 
 **Windowed CP-SAT resource-constrained scheduler with joint engine assignment.**

@@ -1,6 +1,7 @@
 # Direction: Merged floor-movers (integration branch)
 
-**Base:** `explore/merged-floor` @ **1208 cycles**. Do not regress.
+**Base:** `explore/merged-floor` @ **1185 cycles** (PSPACE=1). Do not regress.
+`PSPACE=0` falls back to the idx-space 1208 build.
 
 ## Landed
 
@@ -11,14 +12,13 @@
 | 10 | offset + combine | `_POS_OFFSET_32x16`, head/tail 24/100 |
 | 03 | parity phase-1 | depth-1 `rem` vselect; 0 cycle win |
 | 01 | D3 gather port | default off on 1208 graph |
+| **12** | **p-space traverse** | store `p` not `idx`; −248 valu; annealed re-sweep → **1185** |
 
 ## Next (in order)
 
-1. **#12 p-space** — `directions/12-pspace-traverse.md`. Flag `PSPACE=1` when implemented.
-   Prior attempt reverted; do not commit until tests pass.
-2. **Re-sweep** combine mask + offset.
-3. **#01 D3 gather** grid: `D3_GATHER_TAIL` × `COMBINE_TAIL`.
-4. **#13 mem spill** then **#03 phase-2** d2/d3.
+1. **#01 D3 gather** grid on the post-p-space graph: `D3_GATHER_TAIL` × combine,
+   with its own `experiments/anneal_pspace.py` re-run.
+2. **#13 mem spill** then **#03 phase-2** d2/d3.
 
 ## Rules
 
@@ -31,5 +31,5 @@
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # CYCLES <= 1208
+python tests/submission_tests.py   # CYCLES <= 1185 (PSPACE default 1)
 ```

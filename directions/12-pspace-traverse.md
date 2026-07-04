@@ -1,8 +1,12 @@
 # Direction: p-space traversal — maintain parity `p` instead of full `idx`
 
-> **Status: ACTIVE — highest priority on 1208 base.** Attempted on merged-floor (July 2026);
-> first implementation failed correctness (K5-deferral × d2/d3 borrow mixing). Do not ship
-> until `submission_tests.py` passes. This doc captures the intended design.
+> **Status: LANDED (Jul 2026) — 1208 → 1185 on merged-floor.** Second attempt
+> succeeded: node lookups use clean bits of `p` (no `p>>k` borrow mixing), the
+> deep-round traverse is one muladd `p ← 2p+rem`, and a joint offset+combine
+> re-sweep (`experiments/anneal_pspace.py`) repacked the ALU-bound graph 1211 →
+> 1185. Shipped default `PSPACE=1`; `PSPACE=0` restores idx-space (1208). All
+> gates pass (`parity_check`, `algebra_check_ported`, `submission_tests`).
+> The design below is what shipped.
 
 ## 1. Thesis
 

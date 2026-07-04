@@ -288,6 +288,40 @@ _POS_OFFSET_32x16 = [6, 5, 2, 9, 8, 0, 1, 8, 7, 1, 8, 3, 5, 3, 3, 9,
 # K5-graph re-search.
 _COMBINE_VALU_EXTRA_32x16 = ()
 
+# ---- p-space (#12) champion schedule ---------------------------------------
+# p-space deletes ~248 valu ops (valu floor 1111->1070), leaving ALU the sole
+# binding floor. A joint simulated-annealing re-search (experiments/
+# anneal_pspace.py) over per-position offsets + combine mask rebalances the
+# graph and repacks the windup/drain: 1211 -> 1185 (full 32-rotation build).
+# Both are pure scheduling knobs (offsets reschedule independent vector work;
+# the mask only picks which engine emits an arithmetically identical combine),
+# so correctness is unaffected. Used only when PSPACE=1.
+_POS_OFFSET_PSPACE_32x16 = [5, 4, 3, 10, 9, 0, 2, 9, 6, 1, 8, 3, 6, 3, 3, 5,
+                            11, 7, 3, 2, 6, 7, 5, 4, 5, 5, 6, 10, 10, 0, 1, 1]
+# explicit valu-combine indices (285 of 1536) in per-rotation emit order
+_COMBINE_VALU_PSPACE_32x16 = (0, 1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
+    34, 35, 36, 37, 38, 39, 143, 180, 194, 195, 199, 232, 250, 272, 292, 314,
+    340, 343, 356, 372, 394, 405, 430, 438, 440, 449, 463, 483, 487, 506, 514,
+    557, 560, 614, 615, 616, 631, 645, 668, 710, 716, 720, 760, 775, 801, 803,
+    811, 828, 830, 836, 837, 840, 845, 871, 893, 920, 934, 941, 942, 949, 951,
+    967, 996, 999, 1006, 1014, 1016, 1017, 1029, 1039, 1065, 1119, 1146, 1149,
+    1160, 1173, 1186, 1196, 1197, 1198, 1199, 1200, 1201, 1206, 1208, 1211,
+    1212, 1215, 1218, 1220, 1225, 1226, 1227, 1228, 1231, 1234, 1235, 1239,
+    1242, 1244, 1251, 1253, 1254, 1255, 1256, 1257, 1258, 1260, 1261, 1262,
+    1263, 1268, 1269, 1270, 1273, 1275, 1277, 1279, 1280, 1282, 1286, 1290,
+    1292, 1293, 1294, 1296, 1298, 1299, 1300, 1302, 1303, 1307, 1310, 1313,
+    1317, 1318, 1319, 1320, 1322, 1324, 1326, 1327, 1329, 1330, 1336, 1337,
+    1339, 1340, 1341, 1346, 1350, 1352, 1363, 1364, 1367, 1370, 1371, 1375,
+    1376, 1378, 1380, 1381, 1382, 1386, 1388, 1390, 1394, 1396, 1398, 1399,
+    1400, 1402, 1403, 1405, 1406, 1407, 1408, 1409, 1410, 1411, 1412, 1413,
+    1414, 1417, 1419, 1420, 1421, 1422, 1423, 1424, 1425, 1427, 1429, 1430,
+    1432, 1434, 1437, 1438, 1441, 1444, 1445, 1446, 1448, 1451, 1455, 1456,
+    1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1469, 1470, 1472, 1473,
+    1477, 1479, 1480, 1481, 1484, 1487, 1489, 1490, 1491, 1492, 1495, 1496,
+    1497, 1498, 1499, 1501, 1503, 1504, 1505, 1506, 1507, 1509, 1512, 1513,
+    1514, 1515, 1517, 1524, 1525, 1526, 1529, 1530, 1532, 1533, 1534)
+
 class KernelBuilder:
     def __init__(self):
         self.instrs = []
@@ -334,6 +368,13 @@ class KernelBuilder:
         self._d3_gather_tail = int(_os.environ.get("D3_GATHER_TAIL", "0"))
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
+        # p-space traverse (dir #12): store parity `p` in the idx scratch slot
+        # instead of the full index. idx == 2^d - 1 + p, so node lookups use
+        # clean bits of p and the deep-round traverse collapses to one muladd
+        # (p <- 2*p + rem). Deletes ~248 valu ops; after an offset+combine
+        # re-sweep (experiments/anneal_pspace.py) this ships 1208 -> 1185.
+        # Default ON (the shipped winner); PSPACE=0 restores the idx-space path.
+        self._pspace = int(_os.environ.get("PSPACE", "1"))
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -420,9 +461,15 @@ class KernelBuilder:
         else:
             self.v_alu_scalar("^", dest, a, b)
 
-    def _gather_node(self, node, addr, idx, c):
-        """node = tree[idx] via 8 scalar gathers (addr = fvp + idx)."""
-        self.v_alu("+", addr, c["fvp_v"], idx)
+    def _gather_node(self, node, addr, idx, c, depth):
+        """node = tree[idx] via 8 scalar gathers. In idx-space addr = fvp + idx.
+        In p-space the idx slot holds `p` and idx == 2^depth - 1 + p, so
+        addr = (fvp + 2^depth - 1) + p == fvp_p_d + p (one add, broadcast
+        fvp_p_d folds in the per-depth constant)."""
+        if self._pspace:
+            self.v_alu("+", addr, c[f"fvp_p_{depth}"], idx)
+        else:
+            self.v_alu("+", addr, c["fvp_v"], idx)
         for i in range(V):
             self.op("load", ("load", node + i, addr + i),
                     reads=(addr + i,), writes=(node + i,))
@@ -460,10 +507,19 @@ class KernelBuilder:
             # Depth-1 rounds are always enter_x (predecessor deferred K5), so
             # addr holds rem_x = (trueval%2)^1; branch order is flipped vs the
             # non-x path (same parity swap as the traverse addend).
-            nb_lo, nb_hi = (c["nb1"], c["nb2"]) if enter_x else (c["nb2"], c["nb1"])
-            self.op("flow", ("vselect", node, addr, nb_lo, nb_hi),
-                    reads=set(self.lanes(addr)) | set(self.lanes(nb_lo)) | set(self.lanes(nb_hi)),
-                    writes=self.lanes(node))
+            if self._pspace:
+                # p-space: the idx slot holds the true parity accumulator p
+                # (0 or 1 at depth 1). node = tree[1+p] directly -- p=0 -> tree[1],
+                # p=1 -> tree[2]. cond=idx(=p): p!=0 -> nb2, p==0 -> nb1. No
+                # enter_x branch swap (p is always the true parity, not rem_x).
+                self.op("flow", ("vselect", node, idx, c["nb2"], c["nb1"]),
+                        reads=set(self.lanes(idx)) | set(self.lanes(c["nb2"])) | set(self.lanes(c["nb1"])),
+                        writes=self.lanes(node))
+            else:
+                nb_lo, nb_hi = (c["nb1"], c["nb2"]) if enter_x else (c["nb2"], c["nb1"])
+                self.op("flow", ("vselect", node, addr, nb_lo, nb_hi),
+                        reads=set(self.lanes(addr)) | set(self.lanes(nb_lo)) | set(self.lanes(nb_hi)),
+                        writes=self.lanes(node))
         elif depth == 2:
             # idx in {3,4,5,6}: 4-way mux using broadcasts nb3..nb6 instead of
             # 8 scalar gathers. odd = idx&1 (== (idx-3)&1 since 3 is odd, with
@@ -472,23 +528,41 @@ class KernelBuilder:
             # Multiple mtmp groups reduce cross-vector WAR serialization.
             g = j % c["_num_mtmp_groups"]
             mtmp = c[f"mtmp_{g}"]
-            self.v_alu("&", node, idx, one_v)          # odd = idx & 1 -> node
-            self.v_alu("<", addr, c["four"], idx)      # hi = (4 < idx) -> addr
-            self.op("flow", ("vselect", mtmp, node, c["nb3"], c["nb4"]),
-                    reads=set(self.lanes(node)) | set(self.lanes(c["nb3"])) | set(self.lanes(c["nb4"])),
-                    writes=self.lanes(mtmp))            # inner_lo (nb3 if odd else nb4)
-            self.op("flow", ("vselect", node, node, c["nb5"], c["nb6"]),
-                    reads=set(self.lanes(node)) | set(self.lanes(c["nb5"])) | set(self.lanes(c["nb6"])),
-                    writes=self.lanes(node))            # inner_hi (nb5 if odd else nb6)
-            self.op("flow", ("vselect", node, addr, node, mtmp),
-                    reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
-                    writes=self.lanes(node))            # node = hi ? inner_hi : inner_lo
+            if self._pspace:
+                # p-space: idx slot holds p = idx - 3 (p in {0,1,2,3}). Extract
+                # clean bits of p -- podd = p&1, hi = (1 < p) -- no borrow mixing.
+                # node = tree[3+p]; branch order swapped vs idx-space because the
+                # low tree index (3) is odd, so p-even -> odd tree slot.
+                # p=0->tree3, p=1->tree4, p=2->tree5, p=3->tree6.
+                self.v_alu("&", node, idx, one_v)          # podd = p & 1 -> node
+                self.v_alu("<", addr, one_v, idx)          # hi = (1 < p) -> addr
+                self.op("flow", ("vselect", mtmp, node, c["nb4"], c["nb3"]),
+                        reads=set(self.lanes(node)) | set(self.lanes(c["nb4"])) | set(self.lanes(c["nb3"])),
+                        writes=self.lanes(mtmp))            # inner_lo (nb4 if podd else nb3)
+                self.op("flow", ("vselect", node, node, c["nb6"], c["nb5"]),
+                        reads=set(self.lanes(node)) | set(self.lanes(c["nb6"])) | set(self.lanes(c["nb5"])),
+                        writes=self.lanes(node))            # inner_hi (nb6 if podd else nb5)
+                self.op("flow", ("vselect", node, addr, node, mtmp),
+                        reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
+                        writes=self.lanes(node))            # node = hi ? inner_hi : inner_lo
+            else:
+                self.v_alu("&", node, idx, one_v)          # odd = idx & 1 -> node
+                self.v_alu("<", addr, c["four"], idx)      # hi = (4 < idx) -> addr
+                self.op("flow", ("vselect", mtmp, node, c["nb3"], c["nb4"]),
+                        reads=set(self.lanes(node)) | set(self.lanes(c["nb3"])) | set(self.lanes(c["nb4"])),
+                        writes=self.lanes(mtmp))            # inner_lo (nb3 if odd else nb4)
+                self.op("flow", ("vselect", node, node, c["nb5"], c["nb6"]),
+                        reads=set(self.lanes(node)) | set(self.lanes(c["nb5"])) | set(self.lanes(c["nb6"])),
+                        writes=self.lanes(node))            # inner_hi (nb5 if odd else nb6)
+                self.op("flow", ("vselect", node, addr, node, mtmp),
+                        reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
+                        writes=self.lanes(node))            # node = hi ? inner_hi : inner_lo
         elif depth == 3:
             # idx in {7..14}: 8-way vselect tournament OR drain-tail gather.
             d3i = self._d3_no
             self._d3_no += 1
             if d3i >= self._d3_total - self._d3_gather_tail:
-                self._gather_node(node, addr, idx, c)
+                self._gather_node(node, addr, idx, c, depth)
                 if enter_x:
                     self.v_alu("^", node, node, c["K5"])
             else:
@@ -521,7 +595,7 @@ class KernelBuilder:
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))
         else:
-            self._gather_node(node, addr, idx, c)
+            self._gather_node(node, addr, idx, c, depth)
         # val = val ^ node  (node now free). On no-gather rounds (depth 0/1/2/3
         # -- depth 3 now uses an 8-way vselect mux) the load engine is idle,
         # but valu is still busy with the hash -- so we put this XOR on ALU
@@ -570,7 +644,30 @@ class KernelBuilder:
         # so we can skip the traverse+wrap entirely (saves 3 valu + optional flow).
         if not skip_idx_update:
             self.v_alu("%", addr, val, m2)              # rem = val % 2  (addr free)
-            if defer_k5:
+            if self._pspace:
+                # p-space traverse (dir #12): store parity p (idx == 2^d-1+p).
+                # p_next = 2*p + rem_true for every depth. rem (=val%2) already
+                # in addr. See directions/12-pspace-traverse.md table.
+                if defer_k5:
+                    # x-format: addr = rem_x = rem_true ^ 1. rem_true = rem_x^1,
+                    # so p_next = 2p + (rem_x^1). d0 (p==0): p_next = rem_true =
+                    #   1 - rem_x. d>=1: 2p+1 - rem_x (i2p1=2p+1 folds into muladd,
+                    #   then subtract rem_x).
+                    if depth == 0:
+                        self.v_alu("-", idx, one_v, addr)   # p = 1 - rem_x
+                    else:
+                        self.v_muladd(node, idx, m2, one_v)  # 2p+1 (node free)
+                        self.v_alu("-", idx, node, addr)    # p = (2p+1) - rem_x
+                elif depth == 0:
+                    # non-defer d0: p (==0) enters, p_next = rem.
+                    self.v_alu("+", idx, c["zero"], addr)   # p = rem
+                else:
+                    # non-defer d>=1: p_next = 2*p + rem  (single muladd).
+                    self.v_muladd(idx, idx, m2, addr)       # p = 2*p + rem
+                # No wrap in p-space: the round-10 traverse is skipped (successor
+                # is depth 0, skip_idx_update); round-11 depth-0 sets p = rem
+                # fresh. So the depth==fh wrap branch never fires here.
+            elif defer_k5:
                 # parity swap: this round ended in x-format (val = valx =
                 # trueval ^ K5). K5 is odd, so valx&1 == (trueval&1)^1, and the
                 # reference addend 1+(trueval&1) == 2-(valx&1) (proven 500k in
@@ -594,7 +691,9 @@ class KernelBuilder:
             # wrap: idx = 0 if idx >= n_nodes. This only happens at the bottom
             # (depth == forest_height): for shallower depths 2*idx+1+rem < n_nodes
             # always, so we skip the wrap entirely for 15 of 16 rounds.
-            if depth == c["fh"]:
+            # (p-space needs no wrap: the depth==fh round is always skip_idx_update
+            # -- its successor is depth 0 -- and round-11 depth-0 sets p fresh.)
+            if depth == c["fh"] and not self._pspace:
                 self.v_alu("<", addr, idx, c["nn_v"])   # mask = idx < n_nodes
                 self.op("flow", ("vselect", idx, addr, idx, c["zero"]),
                         reads=set(self.lanes(addr)) | set(self.lanes(idx)) | set(self.lanes(c["zero"])),
@@ -658,6 +757,15 @@ class KernelBuilder:
         c["fvp_v"] = self.broadcast_const("fvp_v", FVP)
         c["nn_v"] = self.broadcast_const("nn_v", n_nodes)
         c["fh"] = forest_height
+        # p-space gather setup (dir #12): the idx slot holds parity p, and
+        # gather addr = fvp + idx = (fvp + 2^d - 1) + p. Fold the per-depth
+        # constant fvp + 2^d - 1 into a broadcast fvp_p_d, so each gather round
+        # is one add (addr = fvp_p_d + p). Only depths that actually gather need
+        # one -- depth>=4 always, depth 3 only under D3_GATHER_TAIL.
+        if self._pspace:
+            for d in range(3, forest_height + 1):
+                c[f"fvp_p_{d}"] = self.broadcast_const(
+                    f"fvp_p_{d}", FVP + (1 << d) - 1)
 
         # ---- loop-control scratch (allocated early; vstride and grp_base double
         # as the fvp+1 / fvp+2 temps during setup, since setup runs before the
@@ -755,8 +863,14 @@ class KernelBuilder:
         fvp_plus_8 = self.scratch_const(FVP + 8, "fvp_p8")
         self.op("load", ("vload", d3_tree_vec, fvp_plus_8),
                 reads=(fvp_plus_8,), writes=tuple(d3_tree_vec + i for i in range(V)))
-        # permuted broadcast order for the 8-way vselect tournament
-        d3_order = [8, 9, 10, 11, 12, 13, 14, 7]  # pos -> tree idx
+        # permuted broadcast order for the 8-way vselect tournament.
+        # idx-space: selector is idx in {7..14}, order maps bits(idx) -> tree[idx].
+        # p-space: selector is p in {0..7} (idx == 7 + p), so bits(p) == p and the
+        # natural order [7..14] gives tree[7+p] == tree[idx].
+        if self._pspace:
+            d3_order = [7, 8, 9, 10, 11, 12, 13, 14]  # pos(=p) -> tree idx
+        else:
+            d3_order = [8, 9, 10, 11, 12, 13, 14, 7]  # pos -> tree idx
         for pos, k in enumerate(d3_order):
             c[f"d3_{pos}"] = self.broadcast_scalar(f"d3_{pos}", ta2[k])
         # K5-deferral: depth-3 rounds are always enter_x -> bake K5 in place.
@@ -857,15 +971,23 @@ class KernelBuilder:
         # unaffected. The winner is specific to the fixed (K_VEC=32, rounds=16)
         # shape; other shapes fall back to the uniform p//step diagonal.
         if self._pos_offset is None and K == 32 and rounds == 16:
-            self._pos_offset = _POS_OFFSET_32x16
-        # Apply the searched combine-mask tweak for the fixed shape: start from
-        # the head/tail heuristic and force the extra interior combines to valu.
+            self._pos_offset = (_POS_OFFSET_PSPACE_32x16 if self._pspace
+                                else _POS_OFFSET_32x16)
+        # Apply the searched combine-mask for the fixed shape. Idx-space: start
+        # from the head/tail heuristic + interior extras. P-space (#12) has a
+        # different op graph (ALU-bound after -248 valu), so it uses its own
+        # annealed explicit valu-combine set (experiments/anneal_pspace.py).
         if self._combine_mask is None and K == 32 and rounds == 16:
             total = 3 * K * rounds
-            m = [(gi < self._combine_head or gi >= total - self._combine_tail)
-                 for gi in range(total)]
-            for gi in _COMBINE_VALU_EXTRA_32x16:
-                m[gi] = True
+            if self._pspace:
+                m = [False] * total
+                for gi in _COMBINE_VALU_PSPACE_32x16:
+                    m[gi] = True
+            else:
+                m = [(gi < self._combine_head or gi >= total - self._combine_tail)
+                     for gi in range(total)]
+                for gi in _COMBINE_VALU_EXTRA_32x16:
+                    m[gi] = True
             self._combine_mask = m
 
         def gen_body(rot):

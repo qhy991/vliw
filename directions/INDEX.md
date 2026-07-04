@@ -1,6 +1,6 @@
 # VLIW Kernel Optimization — Direction Index (post-1208)
 
-**Global best:** `explore/merged-floor` @ **1208 cycles** (121.97×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1185 cycles** (124.67×), verified `tests/submission_tests.py`.
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 
@@ -40,13 +40,15 @@ re-sweep.**
 |---|---|---|---|
 | 11 | dead-idx elimination | part of −22 | skip round-10 traverse/wrap; drop idx vload |
 | 02 | K5-deferral (7 rounds) | part of −22 | −224 valu; selective defer across gather boundary |
-| 10 | per-position offset + combine mask | **1208** | `_POS_OFFSET_32x16`, head/tail 24/100 |
+| 10 | per-position offset + combine mask | 1208 | `_POS_OFFSET_32x16`, head/tail 24/100 |
 | 03 | parity-carry **phase-1** | 0 realized | depth-1 `rem` vselect; −64 valu absorbed |
 | 01 | D3 gather port (tested) | 0 / +3 | `_d3_gather_tail=8` → 1211 on 1208 graph; **default off** |
+| **12** | **p-space traverse** (store `p` not `idx`) | **1185** | −248 valu; annealed offset+combine re-sweep; PSPACE default 1 |
 
-Tail gap @ 1208: combined floor ≈ 1111.5 vs realized 1208 → **~96 cycles** windup/drain
-packing loss (~8.7% inflation). Op-count drops shrink the floor; realized follows with lag
-unless mask/offset are re-tuned.
+Tail gap @ 1185 (PSPACE=1): combined floor ≈ 1097 vs realized 1185 → **~88 cycles**
+windup/drain packing loss. Op-count drops shrink the floor; realized follows with lag
+unless mask/offset are re-tuned (see `experiments/anneal_pspace.py`). The 1208 profile
+above is the PSPACE=0 idx-space fallback.
 
 ---
 
@@ -54,10 +56,10 @@ unless mask/offset are re-tuned.
 
 | Priority | # | Direction | Est. valu | Scratch | Conf | Worktree |
 |---|---|---|---|---|---|---|
-| **1** | **12** | **p-space traverse** (store `p` not `idx`) | **−256** | **0** | medium-high | `explore/merged-floor` |
-| 2 | 01 | D3 drain mux→gather + combine_tail re-sweep | −4…−8 | 0 | medium | `explore/merged-floor` |
-| 3 | 03 | parity-carry **phase-2** d2/d3 (re-permuted tables) | −320 | **+256…768** | medium | `explore/03-round-structure` |
-| 3b | 13 | **mem spill** for rem history (unlocks #03) | (enabler) | mem | low-med | TBD |
+| 1 | 01 | D3 drain mux→gather + combine_tail re-sweep | −4…−8 | 0 | medium | `explore/merged-floor` |
+| 2 | 03 | parity-carry **phase-2** d2/d3 (re-permuted tables) | −320 | **+256…768** | medium | `explore/03-round-structure` |
+| 2b | 13 | **mem spill** for rem history (unlocks #03) | (enabler) | mem | low-med | TBD |
+| — | 12 | p-space traverse | **landed → 1185** | — | — | `explore/merged-floor` |
 | — | 02 | K5-deferral | landed | — | — | `explore/02-hash-opcount` |
 | — | 11 | dead-idx | landed | — | — | `explore/11-dead-code-idx` |
 
@@ -87,14 +89,16 @@ multiplication nonlinearity).
 
 All steps on branch `explore/merged-floor`, commit after each `submission_tests.py` pass.
 
-1. **#12 p-space traverse** — `p ← 2p+rem` muladd; gather `addr = fvp_p_d + p`; d1 cond = `p`.
-   **Do not** naïvely use `p>>k` for d2/d3 mux bits (borrow mixing). Either materialize
-   `idx_true = (2^d−1)+p` for mux rounds (+1 valu) or finish phase-2 table re-permute.
-   Then **re-sweep** `COMBINE_HEAD/TAIL` + offset.
-2. **#01 D3 gather tail** — `D3_GATHER_TAIL=6..8` × `COMBINE_TAIL` grid on 1208 graph.
+1. **#12 p-space traverse — LANDED (1185).** `p ← 2p+rem` muladd; gather
+   `addr = fvp_p_d + p`; d1 cond = `p`; d2 `p&1`,`1<p`; d3 natural table `[7..14]`.
+   Node lookups use clean bits of `p` (NOT `p>>k` — that borrow-mixes). Re-swept
+   offset + combine mask via `experiments/anneal_pspace.py` (rot=27 oracle).
+2. **#01 D3 gather tail** — `D3_GATHER_TAIL=6..8` × combine grid on the **post-p-space**
+   graph (needs its own anneal; PSPACE=1 D3_GATHER_TAIL=6 = 1203 with current mask).
 3. **#13 mem spill** (if needed) — vstore/vload rem ring to mem; unlocks #03 phase-2.
 4. **#03 phase-2** d2/d3 re-permuted parity tables — **−320 valu** after scratch solved.
-5. After **every** op-count change: `sweep_headtail.py` + offset re-search.
+5. After **every** op-count change: re-run `experiments/anneal_pspace.py` (joint
+   offset + combine mask search).
 
 ```bash
 # verify gate (every commit)
@@ -129,7 +133,7 @@ Setup on a fresh machine: `scripts/setup-worktrees.sh` (see `explore/README.md`)
 | [02-hash-opcount.md](02-hash-opcount.md) | landed |
 | [10-autotuner.md](10-autotuner.md) | landed (manual sweep) |
 | [03-round-structure.md](03-round-structure.md) | phase-1 landed; phase-2 scratch-blocked |
-| [12-pspace-traverse.md](12-pspace-traverse.md) | **active — try first** |
+| [12-pspace-traverse.md](12-pspace-traverse.md) | **landed → 1185** |
 | [01-exact-scheduler.md](01-exact-scheduler.md) | falsified; byproduct noted |
 | [04-modulo-pipeline.md](04-modulo-pipeline.md) | deprecated |
 | [09-data-layout.md](09-data-layout.md) | deprecated |

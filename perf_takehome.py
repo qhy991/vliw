@@ -326,6 +326,14 @@ class KernelBuilder:
         self._num_mtmp_groups = 3
         self._pos_offset = None       # per-position emit start offset override
         self._rotations = None        # None -> try all K rotations (shipped)
+        # Drain-targeted mux->gather (dir #01): last N depth-3 instances in
+        # emit order switch from 7 flow + 3 valu mux to 8 scalar gathers.
+        import os as _os
+        self._d3_no = 0
+        self._d3_total = 0
+        self._d3_gather_tail = int(_os.environ.get("D3_GATHER_TAIL", "0"))
+        self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
+        self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -412,6 +420,13 @@ class KernelBuilder:
         else:
             self.v_alu_scalar("^", dest, a, b)
 
+    def _gather_node(self, node, addr, idx, c):
+        """node = tree[idx] via 8 scalar gathers (addr = fvp + idx)."""
+        self.v_alu("+", addr, c["fvp_v"], idx)
+        for i in range(V):
+            self.op("load", ("load", node + i, addr + i),
+                    reads=(addr + i,), writes=(node + i,))
+
     # one round, all vectors (per-vector: original ordering packs best) ----- #
     # depth = round % (forest_height+1). By structural invariant every element
     # is at that tree depth this round, so:
@@ -469,48 +484,44 @@ class KernelBuilder:
                     reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
                     writes=self.lanes(node))            # node = hi ? inner_hi : inner_lo
         elif depth == 3:
-            # idx in {7..14}: 8-way vselect tournament, indexed by the low 3
-            # bits of idx (b0=idx&1, b1=idx&2, b2=idx&4). The broadcasts
-            # c["d3_0"..d3_7"] were emitted in the setup in an order that
-            # matches the (b2,b1,b0) encoding. Cost: 3 valu + 7 flow per vec
-            # (vs 8 loads). Saves ~512 loads over rounds 3 and 14.
-            # Multiple mtmp groups reduce cross-vector WAR serialization.
-            g = j % c["_num_mtmp_groups"]
-            mtmp = c[f"mtmp_{g}"]
-            mtmp2 = c[f"mtmp2_{g}"]
-            mtmp3 = c[f"mtmp3_{g}"]
-            self.v_alu("&", addr, idx, one_v)             # b0 = idx & 1 -> addr
-            # L1: 4 vselects using b0
-            self.op("flow", ("vselect", mtmp, addr, c["d3_1"], c["d3_0"]),
-                    reads=set(self.lanes(addr)) | set(self.lanes(c["d3_1"])) | set(self.lanes(c["d3_0"])),
-                    writes=self.lanes(mtmp))              # l1_0
-            self.op("flow", ("vselect", node, addr, c["d3_3"], c["d3_2"]),
-                    reads=set(self.lanes(addr)) | set(self.lanes(c["d3_3"])) | set(self.lanes(c["d3_2"])),
-                    writes=self.lanes(node))              # l1_1
-            self.op("flow", ("vselect", mtmp2, addr, c["d3_5"], c["d3_4"]),
-                    reads=set(self.lanes(addr)) | set(self.lanes(c["d3_5"])) | set(self.lanes(c["d3_4"])),
-                    writes=self.lanes(mtmp2))             # l1_2
-            self.op("flow", ("vselect", mtmp3, addr, c["d3_7"], c["d3_6"]),
-                    reads=set(self.lanes(addr)) | set(self.lanes(c["d3_7"])) | set(self.lanes(c["d3_6"])),
-                    writes=self.lanes(mtmp3))             # l1_3
-            # L2: 2 vselects using b1. Reuse `addr` for b1 (b0 no longer needed).
-            self.v_alu("&", addr, idx, c["two"])          # b1 = idx & 2 -> addr
-            self.op("flow", ("vselect", mtmp, addr, node, mtmp),
-                    reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
-                    writes=self.lanes(mtmp))              # l2_0 = b1 ? l1_1 : l1_0
-            self.op("flow", ("vselect", mtmp2, addr, mtmp3, mtmp2),
-                    reads=set(self.lanes(addr)) | set(self.lanes(mtmp3)) | set(self.lanes(mtmp2)),
-                    writes=self.lanes(mtmp2))             # l2_1 = b1 ? l1_3 : l1_2
-            # L3: 1 vselect using b2. Reuse `addr` for b2.
-            self.v_alu("&", addr, idx, c["four"])         # b2 = idx & 4 -> addr
-            self.op("flow", ("vselect", node, addr, mtmp2, mtmp),
-                    reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
-                    writes=self.lanes(node))              # node = b2 ? l2_1 : l2_0
+            # idx in {7..14}: 8-way vselect tournament OR drain-tail gather.
+            d3i = self._d3_no
+            self._d3_no += 1
+            if d3i >= self._d3_total - self._d3_gather_tail:
+                self._gather_node(node, addr, idx, c)
+                if enter_x:
+                    self.v_alu("^", node, node, c["K5"])
+            else:
+                g = j % c["_num_mtmp_groups"]
+                mtmp = c[f"mtmp_{g}"]
+                mtmp2 = c[f"mtmp2_{g}"]
+                mtmp3 = c[f"mtmp3_{g}"]
+                self.v_alu("&", addr, idx, one_v)             # b0 = idx & 1 -> addr
+                self.op("flow", ("vselect", mtmp, addr, c["d3_1"], c["d3_0"]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_1"])) | set(self.lanes(c["d3_0"])),
+                        writes=self.lanes(mtmp))
+                self.op("flow", ("vselect", node, addr, c["d3_3"], c["d3_2"]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_3"])) | set(self.lanes(c["d3_2"])),
+                        writes=self.lanes(node))
+                self.op("flow", ("vselect", mtmp2, addr, c["d3_5"], c["d3_4"]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_5"])) | set(self.lanes(c["d3_4"])),
+                        writes=self.lanes(mtmp2))
+                self.op("flow", ("vselect", mtmp3, addr, c["d3_7"], c["d3_6"]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_7"])) | set(self.lanes(c["d3_6"])),
+                        writes=self.lanes(mtmp3))
+                self.v_alu("&", addr, idx, c["two"])
+                self.op("flow", ("vselect", mtmp, addr, node, mtmp),
+                        reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
+                        writes=self.lanes(mtmp))
+                self.op("flow", ("vselect", mtmp2, addr, mtmp3, mtmp2),
+                        reads=set(self.lanes(addr)) | set(self.lanes(mtmp3)) | set(self.lanes(mtmp2)),
+                        writes=self.lanes(mtmp2))
+                self.v_alu("&", addr, idx, c["four"])
+                self.op("flow", ("vselect", node, addr, mtmp2, mtmp),
+                        reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
+                        writes=self.lanes(node))
         else:
-            self.v_alu("+", addr, c["fvp_v"], idx)  # addr = fvp + idx
-            for i in range(V):
-                self.op("load", ("load", node + i, addr + i),
-                        reads=(addr + i,), writes=(node + i,))
+            self._gather_node(node, addr, idx, c)
         # val = val ^ node  (node now free). On no-gather rounds (depth 0/1/2/3
         # -- depth 3 now uses an 8-way vselect mux) the load engine is idle,
         # but valu is still busy with the hash -- so we put this XOR on ALU
@@ -864,6 +875,8 @@ class KernelBuilder:
             self._combine_no = 0
             self._combine_total = 3 * K * rounds
             self._xor_no = 0
+            self._d3_no = 0
+            self._d3_total = K * sum(1 for r in range(rounds) if r % h1 == 3)
             perm = [(j - rot) % K for j in range(K)]
             ppos = {perm[p]: p for p in range(K)}
             # Per-emit-position start offset. Default = p//step (the uniform

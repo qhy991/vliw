@@ -273,12 +273,14 @@ V = VLEN
 # largest power of two <= 32 dividing batch_size/VLEN.
 
 # Per-emit-position start-offset schedule for the fixed (K_VEC=32, rounds=16)
-# shape, found by an offline black-box search (see RESULT.md). Generalizes the
-# uniform `p // step` diagonal stagger; the non-uniform tail packs the drain
-# tighter. Correctness-safe: offsets only reschedule independent vector work
-# (every vector still runs every round with identical ops). Placeholder =
-# uniform diagonal (p//4) pending the K5-graph re-search.
-_POS_OFFSET_32x16 = [p // 4 for p in range(32)]
+# shape, found by an offline black-box search on the K5-deferred op-graph (see
+# RESULT.md). Generalizes the uniform `p // step` diagonal stagger to an
+# arbitrary per-position offset vector; the search found a strongly non-uniform
+# emission order that packs the windup/drain much tighter than the diagonal
+# (1215 -> 1208). Correctness-safe: offsets only reschedule independent vector
+# work (every vector still runs every round with identical ops).
+_POS_OFFSET_32x16 = [6, 5, 2, 9, 8, 0, 1, 8, 7, 1, 8, 3, 5, 3, 3, 9,
+                     9, 7, 3, 2, 5, 6, 5, 4, 3, 1, 7, 8, 9, 1, 0, 1]
 
 # Combine instances (in per-rotation emit order) forced onto the valu engine
 # IN ADDITION to the head/tail default, for the (K_VEC=32, rounds=16) shape

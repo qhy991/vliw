@@ -35,6 +35,14 @@ Realized 1179 → hard-to-estimate but potentially ≤950.
 
 **Confidence: LOW (~10%). Expected value: HIGH.** Run in one worktree.
 
+> **RESOLVED — NO-GO (2026-07-05).** Killed algebra-first in ~1h; 0 ops saved.
+> hash is a bijection (constructive per-stage inverse) with full 32-bit
+> bit-liveness across the round boundary, so the stage-5 `>>16` bottleneck is
+> intra-hash only and never becomes cross-round dead code; structurally `nb` is
+> a parity-dependent runtime gather, not a constant. See
+> `19a-2round-fuse-NOGO.md` + `experiments/fuse_kill_test.py` (branch
+> `explore/19a-2round-fuse`).
+
 ---
 
 ## §b — d5 partial mux (2-level dispatch, cost 2 vloads + 8 broadcasts + 8 gathers-per-instance)

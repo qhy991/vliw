@@ -280,6 +280,13 @@ V = VLEN
 _POS_OFFSET_32x16 = [0, 0, 1, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
                      4, 4, 4, 4, 6, 5, 5, 6, 6, 7, 6, 6, 7, 7, 7, 7]
 
+# Combine instances (in per-rotation emit order) forced onto the valu engine
+# IN ADDITION to the head/tail default, for the (K_VEC=32, rounds=16) shape.
+# Found by a single-bit coordinate-descent under the offset schedule above: the
+# reshaped drain un-saturated this interior combine, so valu-izing it packs one
+# more cycle out (1225 -> 1223). Correctness-safe (engine choice only).
+_COMBINE_VALU_EXTRA_32x16 = (1266,)
+
 class KernelBuilder:
     def __init__(self):
         self.instrs = []
@@ -785,6 +792,15 @@ class KernelBuilder:
         # shape; other shapes fall back to the uniform p//step diagonal.
         if self._pos_offset is None and K == 32 and rounds == 16:
             self._pos_offset = _POS_OFFSET_32x16
+        # Apply the searched combine-mask tweak for the fixed shape: start from
+        # the head/tail heuristic and force the extra interior combines to valu.
+        if self._combine_mask is None and K == 32 and rounds == 16:
+            total = 3 * K * rounds
+            m = [(gi < self._combine_head or gi >= total - self._combine_tail)
+                 for gi in range(total)]
+            for gi in _COMBINE_VALU_EXTRA_32x16:
+                m[gi] = True
+            self._combine_mask = m
 
         def gen_body(rot):
             # Reset the combine counter each rotation so the windup/drain tail

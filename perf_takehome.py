@@ -70,7 +70,9 @@ class Op:
 
 
 class Scheduler:
-    def schedule(self, ops):
+    force_slow = False   # set True to force the original O(n)-scan scheduler
+
+    def schedule(self, ops, key_idx=0):
         n = len(ops)
         bundles = []
         if n == 0:
@@ -191,11 +193,72 @@ class Scheduler:
                 cur += 1
             return bundles
 
-        # Single greedy pass with the height-then-successor priority (the best
-        # key across our sweeps). The rotation search in build_kernel explores
-        # different vector orderings, so we keep the scheduler itself fast.
-        key = lambda i: (-hgt[i], -succ[i], i)
-        bundles = run(key)
+        # Single greedy pass. key_idx selects among the 5 priority orderings
+        # (default 0 = height-then-successor, the best across historical sweeps).
+        # The rotation search in build_kernel explores different vector
+        # orderings, so we keep the scheduler itself fast.
+        key = KEYS[key_idx]
+
+        # Fast incremental scheduler: same greedy list-scheduling semantics as
+        # run() but maintains indegrees + a reverse adjacency so each bundle
+        # only touches the ready set instead of rescanning all n ops twice.
+        # It produces byte-identical bundles to run() whenever there are no
+        # control ops (the only case in this codebase); control workloads fall
+        # back to the original run(). Because an op becomes schedulable only
+        # once all its deps sit in a STRICTLY earlier bundle, placing ops in
+        # the current bundle never unlocks same-bundle dependents -- so freeing
+        # dependents at the bundle boundary reproduces run()'s order exactly.
+        def run_fast(key):
+            alldeps = [deps[i] | ops[i].after for i in range(n)]
+            dependents = [[] for _ in range(n)]
+            indeg = [0] * n
+            for i in range(n):
+                d = alldeps[i]
+                indeg[i] = len(d)
+                for p in d:
+                    dependents[p].append(i)
+            sched = [None] * n
+            ready = [i for i in range(n) if indeg[i] == 0]
+            bundles = []
+            cur = 0
+            placed_total = 0
+            while placed_total < n:
+                ready.sort(key=key)
+                written_this = set()
+                slot_count = defaultdict(int)
+                bundle = {}
+                placed_idx = []
+                leftover = []
+                for i in ready:
+                    op = ops[i]
+                    if slot_count[op.engine] >= SLOT_LIMITS[op.engine]:
+                        leftover.append(i)
+                        continue
+                    if any(a in written_this for a in op.writes):
+                        leftover.append(i)
+                        continue
+                    bundle.setdefault(op.engine, []).append(op.slot)
+                    slot_count[op.engine] += 1
+                    for a in op.writes:
+                        written_this.add(a)
+                    sched[i] = cur
+                    placed_idx.append(i)
+                if not placed_idx:
+                    return None
+                bundles.append(bundle)
+                newly = []
+                for i in placed_idx:
+                    for dep in dependents[i]:
+                        indeg[dep] -= 1
+                        if indeg[dep] == 0:
+                            newly.append(dep)
+                placed_total += len(placed_idx)
+                ready = leftover + newly
+                cur += 1
+            return bundles
+
+        has_control = any(op.control for op in ops)
+        bundles = run(key) if (has_control or self.force_slow) else run_fast(key)
         if bundles is None:
             raise RuntimeError("scheduler deadlock")
         return bundles
@@ -208,6 +271,14 @@ class Scheduler:
 V = VLEN
 # K_VEC (vectors per loop body) is chosen adaptively in build_kernel: the
 # largest power of two <= 32 dividing batch_size/VLEN.
+
+# Per-emit-position start-offset schedule for the fixed (K_VEC=32, rounds=16)
+# shape, found by an offline black-box search (see RESULT.md). Generalizes the
+# uniform `p // step` diagonal stagger; the non-uniform tail packs the drain
+# ~5 cycles tighter. Correctness-safe: offsets only reschedule independent
+# vector work (every vector still runs every round with identical ops).
+_POS_OFFSET_32x16 = [0, 0, 1, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
+                     4, 4, 4, 4, 6, 5, 5, 6, 6, 7, 6, 6, 7, 7, 7, 7]
 
 class KernelBuilder:
     def __init__(self):
@@ -231,6 +302,22 @@ class KernelBuilder:
         self._combine_total = 0       # total combines expected this rotation
         self._combine_head = 10       # vectorize first N combine-instances
         self._combine_tail = 100      # vectorize last N combine-instances
+        # Autotuner knobs. When _combine_mask is not None it is an explicit
+        # per-combine-instance bool list (True -> valu/1-slot, False -> alu/8-
+        # slot) indexed in per-rotation emit order, overriding the head/tail
+        # heuristic above. _xor_mask does the same for the per-(vec,round)
+        # `val ^= node` XOR (indexed by _xor_no); when None the depth<4 rule is
+        # used. These masks only pick which engine emits an arithmetically
+        # identical op, so they never affect correctness. _step / _key_idx /
+        # _num_mtmp_groups are structural knobs promoted from hard-coded values.
+        self._combine_mask = None
+        self._xor_mask = None
+        self._xor_no = 0
+        self._step = 4
+        self._key_idx = 0
+        self._num_mtmp_groups = 3
+        self._pos_offset = None       # per-position emit start offset override
+        self._rotations = None        # None -> try all K rotations (shipped)
 
     def debug_info(self):
         return DebugInfo(scratch_map=self.scratch_debug)
@@ -307,7 +394,12 @@ class KernelBuilder:
         identical either way, so correctness is unaffected."""
         gi = self._combine_no
         self._combine_no += 1
-        if gi < self._combine_head or gi >= self._combine_total - self._combine_tail:
+        if self._combine_mask is not None:
+            use_valu = self._combine_mask[gi]
+        else:
+            use_valu = (gi < self._combine_head
+                        or gi >= self._combine_total - self._combine_tail)
+        if use_valu:
             self.v_alu("^", dest, a, b)
         else:
             self.v_alu_scalar("^", dest, a, b)
@@ -404,10 +496,16 @@ class KernelBuilder:
         # there. On gather rounds (depth >= 4) the load engine is packed and
         # valu still has headroom, so keep the XOR on valu.
         node_src = c["nb0"] if depth == 0 else node
-        if depth < 4:
-            self.v_alu_scalar("^", val, val, node_src)
+        xi = self._xor_no
+        self._xor_no += 1
+        if self._xor_mask is not None:
+            xor_valu = self._xor_mask[xi]
         else:
+            xor_valu = (depth >= 4)
+        if xor_valu:
             self.v_alu("^", val, val, node_src)
+        else:
+            self.v_alu_scalar("^", val, val, node_src)
         # hash: 3 mul_add stages + 3 (t1,t2,combine) stages. Reuse node as
         # hash: 3 mul_add stages + 3 (t1,t2,combine) stages. Reuse node as
         # t1 and addr as t2 (addr free after the gather / the d=1 vselect).
@@ -596,7 +694,7 @@ class KernelBuilder:
         # Multiple mtmp/mtmp2/mtmp3 sets: each vector picks a group by
         # j % NUM_MTMP_GROUPS so vectors in different groups don't serialize
         # on the shared temp scratch (WAR hazards) during depth-3 mux.
-        NUM_MTMP_GROUPS = 3
+        NUM_MTMP_GROUPS = self._num_mtmp_groups
         c["_num_mtmp_groups"] = NUM_MTMP_GROUPS
         for g in range(NUM_MTMP_GROUPS):
             c[f"mtmp_{g}"] = self.vec(f"mtmp_{g}")
@@ -672,9 +770,21 @@ class KernelBuilder:
         # the traverse, not the vload).
         h1 = forest_height + 1
         K = len(vs)
-        step = 4
+        step = self._step
         prefix = self.ops[:]   # iaddr / vload (rotation-independent)
         self.ops = []
+
+        # Per-position emit start-offset schedule. The uniform diagonal stagger
+        # `p // step` is a strict subset of an arbitrary per-position offset
+        # vector; a black-box search over the offsets found a non-uniform
+        # schedule that reshapes the windup/drain (where too few vectors are in
+        # flight to fill both engines) and packs ~5 cycles tighter than the
+        # uniform diagonal. Offsets only reschedule independent vector work
+        # (every vector still runs every round, same ops), so correctness is
+        # unaffected. The winner is specific to the fixed (K_VEC=32, rounds=16)
+        # shape; other shapes fall back to the uniform p//step diagonal.
+        if self._pos_offset is None and K == 32 and rounds == 16:
+            self._pos_offset = _POS_OFFSET_32x16
 
         def gen_body(rot):
             # Reset the combine counter each rotation so the windup/drain tail
@@ -682,14 +792,25 @@ class KernelBuilder:
             # vector runs every round; 3 hash combines per (vec, round).
             self._combine_no = 0
             self._combine_total = 3 * K * rounds
+            self._xor_no = 0
             perm = [(j - rot) % K for j in range(K)]
             ppos = {perm[p]: p for p in range(K)}
-            n_diag = (K + step - 1) // step + rounds - 1
+            # Per-emit-position start offset. Default = p//step (the uniform
+            # block-diagonal stagger). _pos_offset (when set) is an explicit
+            # length-K integer list overriding it, so the windup/drain shape
+            # can be tuned per position. Offsets only reschedule independent
+            # vector work (every vector still runs every round), so correctness
+            # is unaffected.
+            if self._pos_offset is not None:
+                pos_off = self._pos_offset
+            else:
+                pos_off = [p // step for p in range(K)]
+            n_diag = max(pos_off) + rounds
             ops = []
             for diag in range(n_diag):
                 for q in range(K):
                     j = perm[q]
-                    r = diag - ppos[j] // step
+                    r = diag - pos_off[ppos[j]]
                     if 0 <= r < rounds:
                         before = len(self.ops)
                         # Use q (position in diagonal permutation) not j so
@@ -716,9 +837,12 @@ class KernelBuilder:
             return ops
 
         best_body = None
-        for rot in range(K):
+        # _rotations restricts which vector-order rotations are tried (the
+        # oracle sets a single rotation for a fast ~6s eval); default = all K.
+        rotations = self._rotations if self._rotations is not None else range(K)
+        for rot in rotations:
             rnd = gen_body(rot)
-            bundles = Scheduler().schedule(prefix + rnd)
+            bundles = Scheduler().schedule(prefix + rnd, key_idx=self._key_idx)
             if best_body is None or len(bundles) < len(best_body):
                 best_body = bundles
         body_start = len(self.instrs)

@@ -229,7 +229,7 @@ class KernelBuilder:
         # exactly, so it is always correctness-safe. Counts tuned by sweep.
         self._combine_no = 0          # combines emitted so far this rotation
         self._combine_total = 0       # total combines expected this rotation
-        self._combine_head = 24       # vectorize first N combine-instances
+        self._combine_head = 28       # vectorize first N combine-instances
         self._combine_tail = 100      # vectorize last N combine-instances
         # Sweep hooks (do NOT affect the default build). _rots restricts the
         # rotation search to a subset (None = full range(K), the shipped
@@ -345,12 +345,15 @@ class KernelBuilder:
             # nb0 in place of a per-vector node.)
             pass  # handled below in val^node branch
         elif depth == 1:
-            # idx in {1,2}. mask=(idx==1) is equivalent to (idx & 1) for this
-            # range. Use `& 1` because it's a cheap bit-extract that matches
-            # the depth-3 mux pattern and can potentially co-issue.
-            self.v_alu("&", addr, idx, one_v)
-            self.op("flow", ("vselect", node, addr, c["nb1"], c["nb2"]),
-                    reads=set(self.lanes(addr)) | set(self.lanes(c["nb1"])) | set(self.lanes(c["nb2"])),
+            # parity-carry (dir #03): node = tree[1+p], p = rem_{r-1}. The
+            # previous round's traverse left rem in `addr`; no idx&1 extract.
+            # vselect(cond,a,b): cond!=0 -> a. rem=0 -> tree[1]=nb1, rem=1 -> nb2.
+            # Depth-1 rounds are always enter_x (predecessor deferred K5), so
+            # addr holds rem_x = (trueval%2)^1; branch order is flipped vs the
+            # non-x path (same parity swap as the traverse addend).
+            nb_lo, nb_hi = (c["nb1"], c["nb2"]) if enter_x else (c["nb2"], c["nb1"])
+            self.op("flow", ("vselect", node, addr, nb_lo, nb_hi),
+                    reads=set(self.lanes(addr)) | set(self.lanes(nb_lo)) | set(self.lanes(nb_hi)),
                     writes=self.lanes(node))
         elif depth == 2:
             # idx in {3,4,5,6}: 4-way mux using broadcasts nb3..nb6 instead of

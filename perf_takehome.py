@@ -275,17 +275,16 @@ V = VLEN
 # Per-emit-position start-offset schedule for the fixed (K_VEC=32, rounds=16)
 # shape, found by an offline black-box search (see RESULT.md). Generalizes the
 # uniform `p // step` diagonal stagger; the non-uniform tail packs the drain
-# ~5 cycles tighter. Correctness-safe: offsets only reschedule independent
-# vector work (every vector still runs every round with identical ops).
-_POS_OFFSET_32x16 = [0, 0, 1, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
-                     4, 4, 4, 4, 6, 5, 5, 6, 6, 7, 6, 6, 7, 7, 7, 7]
+# tighter. Correctness-safe: offsets only reschedule independent vector work
+# (every vector still runs every round with identical ops). Placeholder =
+# uniform diagonal (p//4) pending the K5-graph re-search.
+_POS_OFFSET_32x16 = [p // 4 for p in range(32)]
 
 # Combine instances (in per-rotation emit order) forced onto the valu engine
-# IN ADDITION to the head/tail default, for the (K_VEC=32, rounds=16) shape.
-# Found by a single-bit coordinate-descent under the offset schedule above: the
-# reshaped drain un-saturated this interior combine, so valu-izing it packs one
-# more cycle out (1225 -> 1223). Correctness-safe (engine choice only).
-_COMBINE_VALU_EXTRA_32x16 = (1266,)
+# IN ADDITION to the head/tail default, for the (K_VEC=32, rounds=16) shape
+# (found by coordinate-descent under the offset schedule). Empty pending the
+# K5-graph re-search.
+_COMBINE_VALU_EXTRA_32x16 = ()
 
 class KernelBuilder:
     def __init__(self):
@@ -307,7 +306,7 @@ class KernelBuilder:
         # exactly, so it is always correctness-safe. Counts tuned by sweep.
         self._combine_no = 0          # combines emitted so far this rotation
         self._combine_total = 0       # total combines expected this rotation
-        self._combine_head = 10       # vectorize first N combine-instances
+        self._combine_head = 24       # vectorize first N combine-instances
         self._combine_tail = 100      # vectorize last N combine-instances
         # Autotuner knobs. When _combine_mask is not None it is an explicit
         # per-combine-instance bool list (True -> valu/1-slot, False -> alu/8-
@@ -417,7 +416,17 @@ class KernelBuilder:
     #   depth 0 -> all idx == 0           -> node = broadcast(tree[0])
     #   depth 1 -> idx in {1,2}           -> node = vselect(idx==1, tree[1], tree[2])
     #   depth >=2 (or 'gather')           -> 8 scalar gathers (idx spread out)
-    def _emit_vec_round(self, v, c, depth, j=0, skip_idx_update=False):
+    def _emit_vec_round(self, v, c, depth, j=0, skip_idx_update=False,
+                        defer_k5=False, enter_x=False):
+        # K5-deferral flags (see algebra_check.py / DIRECTION.md §3):
+        #   enter_x  : incoming `val` is trueval^K5 (its node carries ^K5).
+        #   defer_k5 : this round emits the stage-5 x-variant (drop trailing ^K5)
+        #              and, if it also updates idx, uses the parity-swapped
+        #              traverse (addend 2-(valx&1) instead of 1+(trueval&1)).
+        # Invariant: only depth 0-3 rounds are ever enter_x; a gather round
+        # (depth>=4) never carries K5 (that boundary is exactly why we defer
+        # selectively). Assert it so a bad round-set fails loudly, not silently.
+        assert not (enter_x and depth >= 4), "K5 carried into a gather round"
         one_v, m2 = c["one"], c["m2"]
         idx, val, node, addr = v["idx"], v["val"], v["node"], v["addr"]
         # ---- obtain node_val ----
@@ -502,7 +511,7 @@ class KernelBuilder:
         # but valu is still busy with the hash -- so we put this XOR on ALU
         # there. On gather rounds (depth >= 4) the load engine is packed and
         # valu still has headroom, so keep the XOR on valu.
-        node_src = c["nb0"] if depth == 0 else node
+        node_src = (c["nb0_x"] if enter_x else c["nb0"]) if depth == 0 else node
         xi = self._xor_no
         self._xor_no += 1
         if self._xor_mask is not None:
@@ -528,14 +537,36 @@ class KernelBuilder:
         self.v_alu("+", node, val, c["K3"]); self.v_alu("<<", addr, val, c["sh9"])
         self._combine(val, node, addr)
         self.v_muladd(val, val, c["m9"], c["K4"])
-        self.v_alu("^", node, val, c["K5"]); self.v_alu(">>", addr, val, c["sh16"])
-        self._combine(val, node, addr)
+        if defer_k5:
+            # stage-5 x-variant: val = val ^ (val>>16). The trailing ^K5 is
+            # deferred (carried into the next round as val=trueval^K5, absorbed
+            # by that round's K5-baked node). Deletes one valu op per (vec,round)
+            # on the 7 deferral rounds -> -224 valu ops. `_combine` reads a=val,
+            # b=addr; aliasing val as dest is fine (RAW on the read before write,
+            # same as the non-deferred pattern).
+            self.v_alu(">>", addr, val, c["sh16"])       # t2 = val >> 16
+            self._combine(val, val, addr)                # val = val ^ (val>>16)
+        else:
+            self.v_alu("^", node, val, c["K5"]); self.v_alu(">>", addr, val, c["sh16"])
+            self._combine(val, node, addr)
         # traverse: rem->addr ; i2p1=2*idx+1->node ; idx=i2p1+rem
         # skip_idx_update: on the final round, idx isn't stored/needed anymore,
         # so we can skip the traverse+wrap entirely (saves 3 valu + optional flow).
         if not skip_idx_update:
             self.v_alu("%", addr, val, m2)              # rem = val % 2  (addr free)
-            if depth == 0:
+            if defer_k5:
+                # parity swap: this round ended in x-format (val = valx =
+                # trueval ^ K5). K5 is odd, so valx&1 == (trueval&1)^1, and the
+                # reference addend 1+(trueval&1) == 2-(valx&1) (proven 500k in
+                # algebra_check.py). Zero extra ops -- muladd const 1->2 and
+                # traverse '+'->'-'. two_v is the broadcast of 2 (== c["m2"]).
+                two_v = c["m2"]
+                if depth == 0:
+                    self.v_alu("-", idx, two_v, addr)   # idx = 2 - rem_x
+                else:
+                    self.v_muladd(node, idx, m2, two_v)  # i2p2 = 2*idx+2 (node free)
+                    self.v_alu("-", idx, node, addr)    # idx = i2p2 - rem_x
+            elif depth == 0:
                 # depth-0 structural invariant: every lane has idx == 0, so
                 # i2p1 = 2*idx+1 == 1 for all lanes. Constant-fold the muladd
                 # away -- idx = 1 + rem directly (one_v is the broadcast of 1).
@@ -649,6 +680,20 @@ class KernelBuilder:
         c["nb0"] = self.broadcast_scalar("nb0", c["t0"])
         c["nb1"] = self.broadcast_scalar("nb1", c["t1"])
         c["nb2"] = self.broadcast_scalar("nb2", c["t2"])
+        # ---- stage-5 K5-deferral: bake K5 into the node broadcasts consumed by
+        # x-format ("enter_x") rounds. A round entered in x-format carries
+        # val = trueval ^ K5, so its node must be pre-XORed with K5 for the
+        # (val ^ node) input to equal trueval ^ node (K5 cancels). Every depth
+        # 1/2/3 round is always enter_x (its predecessor always defers), so
+        # nb1/nb2, nb3..nb6 and d3_* can be baked IN PLACE. Only depth-0 is
+        # split: round 0 uses raw nb0 (no predecessor -> trueval format), all
+        # later depth-0 rounds use the K5-baked nb0_x. ~15 one-time setup ops
+        # vs 224 valu ops deleted from the body. (Proven bit-exact: see
+        # algebra_check.py.)
+        c["nb0_x"] = self.vec("nb0_x")
+        self.v_alu("^", c["nb0_x"], c["nb0"], c["K5"])   # nb0_x = tree[0] ^ K5
+        self.v_alu("^", c["nb1"], c["nb1"], c["K5"])     # bake in place (all
+        self.v_alu("^", c["nb2"], c["nb2"], c["K5"])     # depth-1 rounds enter_x)
 
         # tree[3..6] scalars + broadcasts for depth-2 rounds (idx in {3,4,5,6}):
         # a 4-way vselect mux replaces the 8 scalar gathers. fvp+3 .. fvp+6.
@@ -657,6 +702,9 @@ class KernelBuilder:
         ta = {k: tree_lo + k for k in range(3, 7)}
         for k in range(3, 7):
             c[f"nb{k}"] = self.broadcast_scalar(f"nb{k}", ta[k])
+        # K5-deferral: depth-2 rounds are always enter_x -> bake K5 in place.
+        for k in range(3, 7):
+            self.v_alu("^", c[f"nb{k}"], c[f"nb{k}"], c["K5"])
         # shared temp for the 4-way mux (written+read within one mux, so the
         # scheduler serializes it across vectors only within depth-2 rounds).
         c["mtmp"] = self.vec("mtmp")
@@ -695,6 +743,9 @@ class KernelBuilder:
         d3_order = [8, 9, 10, 11, 12, 13, 14, 7]  # pos -> tree idx
         for pos, k in enumerate(d3_order):
             c[f"d3_{pos}"] = self.broadcast_scalar(f"d3_{pos}", ta2[k])
+        # K5-deferral: depth-3 rounds are always enter_x -> bake K5 in place.
+        for pos in range(8):
+            self.v_alu("^", c[f"d3_{pos}"], c[f"d3_{pos}"], c["K5"])
         # intermediate scratch for the mux L1 (4 values) and L2 (2 values).
         # We reuse per-vector `node` and `addr` for L1_1 and L1_2, so only
         # need 2 shared temps for L1_0 and L1_3 (mtmp is already d=2's temp).
@@ -732,7 +783,8 @@ class KernelBuilder:
                     entry["iaddr"] = self.alloc_scratch(f"{p}_iaddr")
                     entry["vaddr"] = self.alloc_scratch(f"{p}_vaddr")
                 else:
-                    entry["iaddr"] = self.scratch_const(IIP + j * V, f"{p}_iaddr")
+                    # iaddr const dropped: the idx vload is dead (round 0 is
+                    # depth 0 and never reads idx), so only vaddr is needed.
                     entry["vaddr"] = self.scratch_const(IVP + j * V, f"{p}_vaddr")
             vs.append(entry)
 
@@ -759,12 +811,10 @@ class KernelBuilder:
                 self.op("alu", ("+", vs[j]["vaddr"], grp_base_v, offc),
                         reads=(grp_base_v, offc), writes=(vs[j]["vaddr"],))
 
-        # vload idx, val for each vector
+        # vload val for each vector. The idx vload is DEAD: round 0 is depth 0,
+        # which never reads idx (node comes from nb0; traverse writes idx fresh).
         for j in range(K_VEC):
-            ia = grp_base if j == 0 else vs[j]["iaddr"]
             va = grp_base_v if j == 0 else vs[j]["vaddr"]
-            self.op("load", ("vload", vs[j]["idx"], ia),
-                    reads=(ia,), writes=self.lanes(vs[j]["idx"]))
             self.op("load", ("vload", vs[j]["val"], va),
                     reads=(va,), writes=self.lanes(vs[j]["val"]))
 
@@ -832,8 +882,25 @@ class KernelBuilder:
                         # Use q (position in diagonal permutation) not j so
                         # adjacent-in-emit-order vectors use different mtmp
                         # groups, maximizing scheduler freedom.
+                        # skip idx update when nothing downstream reads it:
+                        # (a) final round; (b) next round is depth 0, which
+                        # never reads idx (this also deletes the round-10
+                        # wrap compare+vselect -- the wrap round always
+                        # precedes a depth-0 round by construction).
+                        skip = (r == rounds - 1) or ((r + 1) % h1 == 0)
+                        # stage-5 K5-deferral (see _emit_vec_round /
+                        # algebra_check.py): defer this round's trailing ^K5 iff
+                        # its SUCCESSOR is a broadcast/mux round (depth<4) -- then
+                        # the successor's K5-baked node absorbs the carry for
+                        # free. Never defer across a gather boundary (successor
+                        # depth>=4) or on the final round.
+                        defer_k5 = (r != rounds - 1) and ((r + 1) % h1 < 4)
+                        # enter_x: this round's node is K5-baked iff its
+                        # predecessor deferred, i.e. defer_k5 held for round r-1.
+                        enter_x = (r > 0) and ((r - 1) != rounds - 1) and ((r % h1) < 4)
                         self._emit_vec_round(vs[j], c, r % h1, j=q,
-                                             skip_idx_update=(r == rounds - 1))
+                                             skip_idx_update=skip,
+                                             defer_k5=defer_k5, enter_x=enter_x)
                         ops.extend(self.ops[before:])
                         # Emit this vector's vstores right after its last round
                         # so they can be co-scheduled with other vectors' body

@@ -1,30 +1,28 @@
-# Direction: Merged floor-movers (#11 + #02 + #03)
+# Direction: Merged floor-movers
 
-Stack order (all on this branch):
+Base: **`10-autotuner` @ 1208** (K5 + offset + combine mask). Do not regress below 1208.
 
-1. **#11 dead-idx** — round-10 traverse+wrap + idx vloads deleted; combine 24/100
-2. **#02 K5-deferral** — selective 7-round x-space carry; baseline **1215 cycles**
-3. **#03 parity-carry** — shallow node-select keyed on raw `rem` vectors (in progress)
+## Stack
 
-## Current task (#03)
+| # | Lane | Status |
+|---|------|--------|
+| 11 | dead-idx | in base |
+| 02 | K5-deferral | in base |
+| 10 | offset `_POS_OFFSET_32x16` | in base → 1208 |
+| 03 | parity-carry | **phase-1 done** (depth-1) |
 
-Implement parity-carry per `directions/03-round-structure.md` §3 on the 1215 base.
+## #03 phase-1 (landed)
 
-**Phase 1 (landed):** depth-1 `&`-extract removal — `rem_{r-1}` already in `addr`
-from the previous traverse; `vselect(node, addr, nb2, nb1)` replaces `idx&1`.
+Depth-1: `vselect(node, addr, nb_lo, nb_hi)` keyed on `rem_{r-1}`; K5 flip when `enter_x`.
 
-**Phase 2 (blocked on scratch):** depth-2/3 need 2–3 rem history slots; only ~65
-scratch words free. Options: overlap rem ring with `node`/`addr` lifetimes, or reduce
-`NUM_MTMP_GROUPS`, before landing d2/d3.
+## Next
 
-## Measurement
+- Depth-2/3 parity-carry (scratch ~88 words free on 1208 base)
+- Re-run offset search only if d2/d3 op drops move cycles below 1208
+
+## Verify
 
 ```bash
-python parity_check.py          # algebra gate for #03
-python algebra_check.py         # K5 gate for #02
-python tests/submission_tests.py
+python parity_check.py && python algebra_check_ported.py
+python tests/submission_tests.py   # must stay OK, CYCLES <= 1208
 ```
-
-## Goal
-
-Beat **1215** with correct parity-carry on top of the merged #11+#02 kernel.

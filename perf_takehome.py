@@ -294,32 +294,48 @@ _COMBINE_ALU_EXTRA_32x16 = (1461,)
 # alu slack (~963). Co-bind rebalance (experiments/anneal_cobind.py): move 47
 # middle combines valu->alu (347->300) + same offset -> 1184 -> 1179.
 # Both are pure scheduling knobs; used only when PSPACE=1.
-_POS_OFFSET_PSPACE_32x16 = [4, 4, 3, 9, 8, 2, 3, 9,
-                            6, 1, 8, 3, 5, 4, 3, 4,
-                            11, 7, 5, 4, 5, 7, 5, 3,
-                            6, 5, 7, 10, 10, 0, 1, 1]
+_POS_OFFSET_PSPACE_32x16 = [4, 4, 3, 11, 8, 2, 3, 10,
+                            6, 1, 8, 5, 5, 4, 3, 4,
+                            11, 8, 5, 5, 5, 7, 4, 3,
+                            6, 4, 7, 10, 11, 0, 0, 0]
 # explicit valu-combine indices (300 of 1536) in per-rotation emit order
 _COMBINE_VALU_PSPACE_32x16 = (
-    0, 1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-    18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 32, 33, 34,
-    35, 36, 37, 38, 39, 506, 507, 514, 536, 544, 553, 557, 559, 560, 601, 612,
-    614, 615, 616, 630, 631, 634, 642, 643, 645, 646, 647, 654, 659, 668, 683, 707,
-    710, 714, 716, 718, 720, 732, 743, 745, 749, 760, 763, 775, 780, 791, 801, 803,
-    808, 811, 815, 828, 830, 835, 836, 840, 845, 860, 865, 871, 879, 893, 915, 920,
-    934, 941, 942, 947, 951, 953, 955, 956, 967, 977, 979, 983, 992, 996, 999, 1006,
-    1014, 1016, 1017, 1029, 1039, 1045, 1065, 1078, 1096, 1099, 1101, 1117, 1119, 1126, 1128, 1146,
-    1149, 1160, 1162, 1165, 1173, 1178, 1186, 1196, 1200, 1201, 1208, 1209, 1210, 1212, 1213, 1215,
-    1216, 1220, 1225, 1227, 1228, 1230, 1232, 1233, 1234, 1235, 1238, 1239, 1240, 1242, 1244, 1245,
-    1251, 1253, 1255, 1256, 1260, 1262, 1263, 1264, 1269, 1270, 1274, 1276, 1277, 1279, 1280, 1281,
-    1285, 1286, 1289, 1290, 1292, 1293, 1294, 1295, 1297, 1298, 1299, 1306, 1308, 1310, 1312, 1313,
-    1318, 1319, 1321, 1322, 1325, 1327, 1329, 1330, 1331, 1332, 1334, 1335, 1336, 1337, 1338, 1339,
-    1340, 1341, 1346, 1352, 1353, 1354, 1362, 1365, 1368, 1369, 1371, 1372, 1373, 1376, 1378, 1380,
-    1382, 1384, 1386, 1389, 1390, 1393, 1394, 1395, 1397, 1398, 1399, 1403, 1406, 1408, 1409, 1410,
-    1412, 1413, 1414, 1417, 1418, 1419, 1420, 1421, 1424, 1425, 1427, 1429, 1440, 1441, 1446, 1447,
-    1448, 1452, 1453, 1454, 1456, 1461, 1462, 1463, 1464, 1468, 1470, 1471, 1473, 1474, 1476, 1481,
-    1483, 1484, 1485, 1489, 1490, 1491, 1492, 1499, 1500, 1501, 1508, 1509, 1510, 1511, 1512, 1513,
-    1515, 1518, 1519, 1520, 1522, 1523, 1525, 1526, 1527, 1530, 1531, 1532
+    0, 1, 2, 4, 5, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 32, 33, 34, 35, 38,
+    39, 44, 55, 123, 137, 144, 163, 164, 182, 183, 234, 250, 253, 274, 286, 289,
+    293, 294, 298, 303, 348, 409, 463, 468, 478, 500, 506, 507, 514, 517, 527, 536,
+    544, 546, 550, 557, 559, 560, 607, 612, 613, 614, 615, 616, 630, 631, 634, 638,
+    642, 643, 645, 647, 654, 668, 673, 680, 683, 686, 689, 693, 707, 710, 713, 714,
+    716, 718, 732, 739, 743, 745, 749, 751, 755, 756, 760, 763, 764, 765, 767, 775,
+    791, 795, 801, 803, 808, 810, 811, 815, 828, 830, 835, 836, 840, 842, 851, 864,
+    865, 871, 879, 880, 893, 910, 914, 915, 920, 933, 934, 941, 942, 945, 947, 949,
+    951, 953, 955, 956, 967, 975, 976, 979, 983, 992, 996, 999, 1006, 1011, 1014, 1016,
+    1017, 1029, 1034, 1039, 1045, 1054, 1065, 1078, 1096, 1099, 1101, 1103, 1106, 1117, 1119, 1126,
+    1142, 1146, 1147, 1149, 1160, 1162, 1165, 1169, 1178, 1186, 1194, 1196, 1200, 1201, 1204, 1208,
+    1209, 1210, 1212, 1213, 1215, 1216, 1220, 1225, 1227, 1228, 1229, 1230, 1231, 1232, 1233, 1234,
+    1235, 1237, 1238, 1239, 1240, 1242, 1244, 1245, 1248, 1251, 1253, 1255, 1256, 1260, 1262, 1263,
+    1264, 1269, 1270, 1274, 1275, 1276, 1277, 1279, 1280, 1281, 1283, 1285, 1286, 1289, 1290, 1292,
+    1293, 1294, 1295, 1297, 1298, 1299, 1306, 1308, 1310, 1313, 1317, 1318, 1319, 1321, 1322, 1325,
+    1327, 1329, 1331, 1332, 1334, 1335, 1336, 1337, 1338, 1339, 1340, 1341, 1346, 1348, 1352, 1353,
+    1354, 1362, 1365, 1368, 1369, 1371, 1372, 1373, 1376, 1378, 1380, 1382, 1384, 1386, 1389, 1390,
+    1394, 1395, 1397, 1398, 1399, 1403, 1406, 1408, 1409, 1410, 1412, 1413, 1414, 1417, 1418, 1421,
+    1424, 1425, 1427, 1440, 1446, 1447, 1448, 1452, 1453, 1454, 1456, 1461, 1462, 1463, 1464, 1468,
+    1470, 1471, 1473, 1474, 1476, 1481, 1483, 1484, 1485, 1489, 1490, 1492, 1493, 1499, 1500, 1501,
+    1508, 1509, 1510, 1512, 1513, 1515, 1518, 1519, 1522, 1523, 1524, 1525, 1526, 1527, 1528, 1530,
+    1531, 1532,
 )
+
+# d2/d3 traverse *extract* instances (per-rotation emit order) moved from
+# valu to alu (v_alu_ex mask False), for the (K_VEC=32, rounds=16) p-space
+# graph. Joint (combine, extract, offset) anneal (experiments/anneal_extract.py)
+# shed 57 of 320 extracts to the alu slack -> valu floor down, 1179 -> 1174.
+_EXTRACT_ALU_PSPACE_32x16 = (
+    7, 8, 16, 23, 25, 26, 31, 37, 41, 52, 65, 66, 69, 77, 84, 86,
+    87, 92, 96, 100, 103, 116, 118, 121, 128, 131, 151, 152, 154, 164, 186, 188,
+    192, 196, 197, 203, 207, 208, 214, 215, 218, 223, 243, 247, 250, 261, 263, 266,
+    267, 270, 277, 282, 284, 285, 312, 315, 317,
+)
+
 
 class KernelBuilder:
     def __init__(self):
@@ -354,6 +370,8 @@ class KernelBuilder:
         self._combine_mask = None
         self._xor_mask = None
         self._xor_no = 0
+        self._extract_mask = None     # d2/d3 traverse extract engine mask (Tier B)
+        self._extract_no = 0
         self._step = 4
         self._key_idx = 0
         self._num_mtmp_groups = 3
@@ -436,6 +454,26 @@ class KernelBuilder:
         for i in range(V):
             self.op("alu", (opn, dest + i, a + i, b + i),
                     reads=(a + i, b + i), writes=(dest + i,))
+
+    def v_alu_ex(self, opn, dest, a, b):
+        """Depth-2/3 traverse *extract* op (idx&1, 1<p, etc.). Defaults to the
+        valu engine (1 slot) exactly like v_alu. When _extract_mask is set it is
+        a per-extract-instance bool list (True -> valu/1-slot, False -> alu/8-
+        slot) indexed by _extract_no, mirroring _combine_mask/_xor_mask. Post-#12
+        valu is the sole binding floor (~1099) with ~105 alu slack; selectively
+        migrating extracts to alu where valu is idle (windup/drain tails) lowers
+        the binding floor. Arithmetically identical either way -> never affects
+        correctness."""
+        xi = self._extract_no
+        self._extract_no += 1
+        if self._extract_mask is not None and xi < len(self._extract_mask):
+            use_valu = self._extract_mask[xi]
+        else:
+            use_valu = True
+        if use_valu:
+            self.v_alu(opn, dest, a, b)
+        else:
+            self.v_alu_scalar(opn, dest, a, b)
 
     def v_muladd(self, dest, a, b, c):
         reads = set(self.lanes(a)) | set(self.lanes(b)) | set(self.lanes(c))
@@ -533,8 +571,8 @@ class KernelBuilder:
                 # node = tree[3+p]; branch order swapped vs idx-space because the
                 # low tree index (3) is odd, so p-even -> odd tree slot.
                 # p=0->tree3, p=1->tree4, p=2->tree5, p=3->tree6.
-                self.v_alu("&", node, idx, one_v)          # podd = p & 1 -> node
-                self.v_alu("<", addr, one_v, idx)          # hi = (1 < p) -> addr
+                self.v_alu_ex("&", node, idx, one_v)          # podd = p & 1 -> node
+                self.v_alu_ex("<", addr, one_v, idx)          # hi = (1 < p) -> addr
                 self.op("flow", ("vselect", mtmp, node, c["nb4"], c["nb3"]),
                         reads=set(self.lanes(node)) | set(self.lanes(c["nb4"])) | set(self.lanes(c["nb3"])),
                         writes=self.lanes(mtmp))            # inner_lo (nb4 if podd else nb3)
@@ -569,7 +607,7 @@ class KernelBuilder:
                 mtmp = c[f"mtmp_{g}"]
                 mtmp2 = c[f"mtmp2_{g}"]
                 mtmp3 = c[f"mtmp3_{g}"]
-                self.v_alu("&", addr, idx, one_v)             # b0 = idx & 1 -> addr
+                self.v_alu_ex("&", addr, idx, one_v)             # b0 = idx & 1 -> addr
                 self.op("flow", ("vselect", mtmp, addr, c["d3_1"], c["d3_0"]),
                         reads=set(self.lanes(addr)) | set(self.lanes(c["d3_1"])) | set(self.lanes(c["d3_0"])),
                         writes=self.lanes(mtmp))
@@ -582,14 +620,14 @@ class KernelBuilder:
                 self.op("flow", ("vselect", mtmp3, addr, c["d3_7"], c["d3_6"]),
                         reads=set(self.lanes(addr)) | set(self.lanes(c["d3_7"])) | set(self.lanes(c["d3_6"])),
                         writes=self.lanes(mtmp3))
-                self.v_alu("&", addr, idx, c["two"])
+                self.v_alu_ex("&", addr, idx, c["two"])
                 self.op("flow", ("vselect", mtmp, addr, node, mtmp),
                         reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
                         writes=self.lanes(mtmp))
                 self.op("flow", ("vselect", mtmp2, addr, mtmp3, mtmp2),
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp3)) | set(self.lanes(mtmp2)),
                         writes=self.lanes(mtmp2))
-                self.v_alu("&", addr, idx, c["four"])
+                self.v_alu_ex("&", addr, idx, c["four"])
                 self.op("flow", ("vselect", node, addr, mtmp2, mtmp),
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))
@@ -991,6 +1029,19 @@ class KernelBuilder:
                     m[gi] = False
             self._combine_mask = m
 
+        # Apply the searched extract-mask (p-space only). Post-#12/#14 valu is
+        # the sole binding floor (~1099) with ~105 alu slack. A joint
+        # (combine, extract, offset) anneal (experiments/anneal_extract.py) shed
+        # 57 of the 320 d2/d3 traverse extracts to the alu slack, lowering the
+        # valu floor: 1179 -> 1174. Extracts are arithmetically identical on
+        # either engine, so this never affects correctness. The extract count per
+        # rotation is a deterministic 320 for this fixed shape.
+        if (self._extract_mask is None and self._pspace
+                and K == 32 and rounds == 16):
+            n_ex = 320
+            alu = set(_EXTRACT_ALU_PSPACE_32x16)
+            self._extract_mask = [gi not in alu for gi in range(n_ex)]
+
         def gen_body(rot):
             # Reset the combine counter each rotation so the windup/drain tail
             # policy in _combine is applied consistently per rotation. Every
@@ -998,6 +1049,7 @@ class KernelBuilder:
             self._combine_no = 0
             self._combine_total = 3 * K * rounds
             self._xor_no = 0
+            self._extract_no = 0
             self._d3_no = 0
             self._d3_total = K * sum(1 for r in range(rounds) if r % h1 == 3)
             perm = [(j - rot) % K for j in range(K)]

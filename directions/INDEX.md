@@ -1,6 +1,6 @@
 # VLIW Kernel Optimization — Direction Index (post-1208)
 
-**Global best:** `explore/merged-floor` @ **1179 cycles** (125.30×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1174 cycles** (125.84×), verified `tests/submission_tests.py`.
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 
@@ -45,9 +45,10 @@ re-sweep.**
 | 01 | D3 gather port (tested) | 0 / +3 | `_d3_gather_tail=8` → 1211 on 1208 graph; **default off** |
 | **12** | **p-space traverse** (store `p` not `idx`) | **1184** | −248 valu; annealed offset+combine re-sweep; PSPACE default 1 |
 | **14** | **co-bind rebalance** (valu→alu combine shift) | **1179** | 347→300 valu combines; `anneal_cobind.py` |
+| **15** | **d2/d3 extract valu→alu** (joint anneal) | **1174** | 57/320 extracts→alu; tail-pack; `anneal_extract.py` |
 
-Tail gap @ 1179 (PSPACE=1): valu binding ≈ 1099 vs realized 1179 → **~80 cycles**
-packing loss. Post-#12 binding is **valu-only** (alu ~995, slack ~105). Op-count drops
+Tail gap @ 1174 (PSPACE=1): valu binding ≈ 1099 vs realized 1174 → **~75 cycles**
+packing loss. Post-#12 binding is **valu-only** (alu ~997, slack ~102). Op-count drops
 shrink the floor; realized follows with lag unless mask/offset are re-tuned
 (`experiments/anneal_cobind.py`). The 1208 profile above is the PSPACE=0 idx-space fallback.
 
@@ -57,13 +58,12 @@ shrink the floor; realized follows with lag unless mask/offset are re-tuned
 
 | Priority | # | Direction | Est. valu | Scratch | Conf | Worktree |
 |---|---|---|---|---|---|---|
-| 1 | 14 | **co-bind rebalance** + joint anneal | 0 (relocate) | 0 | **high** | `explore/merged-floor` |
-| 2 | B1 | d2/d3 mux extract valu→alu | 0 (relocate) | 0 | medium | `explore/14-valu-alu` |
-| 3 | B2 | scratch liveness → partial phase-2 | −64…−128 | TBD | low-med | `explore/03-round-structure` |
+| 1 | B2 | scratch liveness → partial phase-2 (structural) | −64…−128 | TBD | low-med | `explore/03-round-structure` |
+| — | 15 | d2/d3 extract valu→alu (joint anneal) | 0 (relocate) | 0 | **landed → 1174** | `explore/merged-floor` |
+| — | 14 | co-bind rebalance | **landed → 1179** | — | — | `explore/merged-floor` |
 | — | 01 | D3 gather on p-space | — | 0 | **falsified** | archive |
 | — | 13 | mem spill | — | mem | **NO-GO** | archive |
 | — | 12 | p-space traverse | **landed → 1184** | — | — | `explore/merged-floor` |
-| — | 14 | co-bind rebalance | **landed → 1179** | — | — | `explore/merged-floor` |
 | — | 02 | K5-deferral | landed | — | — | `explore/02-hash-opcount` |
 | — | 11 | dead-idx | landed | — | — | `explore/11-dead-code-idx` |
 

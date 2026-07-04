@@ -1,22 +1,34 @@
-# RESULT: Merged floor-movers — global best **1179**
+# RESULT: Merged floor-movers — global best **1174**
 
 **Branch:** `explore/merged-floor`  
-**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1179** (125.30×)
+**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1174** (125.84×)
 
-## Engine profile @ 1179 (PSPACE=1, shipped default)
+## Engine profile @ 1174 (PSPACE=1, shipped default)
 
 ```
-valu:  6595 ops / 6 = 1099.2
-alu:  11936 ops /12 =  994.7
+valu:  6593 ops / 6 = 1098.8
+alu:  11960 ops /12 =  996.7
 load:  2141 ops / 2 = 1070.5
 flow:   704 ops / 1 =  704.0
 store:   32 ops / 2 =   16.0
-scratch: 1520 / 1536 (16 free)
-combined valu binding ≈ 1099  |  realized 1179  |  tail gap ≈ 80
+combined valu binding ≈ 1099  |  realized 1174  |  tail gap ≈ 75
 ```
 
-**Binding flipped after #12:** valu is sole binding; alu has ~105 cycles slack.
+**Binding flipped after #12:** valu is sole binding; alu has ~102 cycles slack.
 Co-bind rebalance (#14): 347→300 valu combines (middle segment → alu) → **1184→1179**.
+
+## #15 d2/d3 extract valu→alu migration — LANDED (1179 → 1174, −5)
+
+Post-#12/#14 valu is the sole binding floor (~1099) with ~105 alu slack. The 320
+d2/d3 traverse *extract* ops (idx&1, 1<p, idx&2, idx&4) all defaulted to valu.
+Blanket migration over-shoots (alu → 1208), because the extracts sit in the
+saturated middle band, not the idle tails. A **joint (combine, extract, offset)
+simulated anneal** (`experiments/anneal_extract.py`) found the 57 individually-idle
+extract instances to shed to alu; the win is mostly tighter tail packing (gap
+80→75) with a co-tuned combine mask (300→354 valu) and offset vector. New
+`v_alu_ex` hook + `_extract_mask` (default None ⇒ all-valu ⇒ identical 1179), and
+`_EXTRACT_ALU_PSPACE_32x16` shipped default. Extracts are arithmetically identical
+on either engine, so correctness is untouched. See `champ_extract.json`.
 
 ## #12 p-space traverse — LANDED (1208 → 1184, −24)
 
@@ -53,7 +65,8 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | 11+02+10 | dead-idx, K5-deferral, offset+combine | 1208 | −22 |
 | 03 ph.1 | depth-1 parity-carry (`rem` vselect) | 1208 | −64 valu, absorbed |
 | 12 | p-space traverse + re-sweep | 1184 | −248 valu; −24 cycles |
-| **14** | **co-bind rebalance (300 valu combines)** | **1179** | **−5 cycles** |
+| 14 | co-bind rebalance (300 valu combines) | 1179 | −5 cycles |
+| **15** | **d2/d3 extract valu→alu (joint anneal)** | **1174** | **−5 cycles; tail-pack + 57 extracts→alu** |
 | 10b | idx-space head/tail+mask re-sweep | 1199 | PSPACE=0 fallback only |
 
 ## Falsified on p-space graph
@@ -63,21 +76,27 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | #01 D3 gather | d3>0 → 1201+ | KILL on p-space |
 | #03 idx-space low-bit | 1197 on 1208 graph | not portable to PSPACE=1 |
 | #13 mem spill | NO-GO | load floor blocks |
+| co-bind anneal (mask+offset) | full-32 = 1180 | no win beyond #14/#15 |
+| D3-gather anneal | stuck 1184 | no win |
 
 ## Remaining levers (ranked)
 
-1. **anneal_cobind.py** — joint mask+offset SA with valu→alu bias (may beat 1179).
-2. **d2/d3 valu→alu migration** — push mux extracts to alu slack (Tier B).
-3. **scratch liveness** — partial phase-2 if words free up.
+1. **structural valu-op deletion** — floor barely moved (1099→1099); #15 was a
+   packing/rebalance win, so the ~75-cycle tail gap and the 1099 floor are still
+   the two prizes. #03 phase-2 (d2/d3 re-permuted parity tables, −320 valu) needs
+   scratch first.
+2. **scratch liveness** — partial phase-2 if words free up.
+3. Re-run `experiments/anneal_extract.py` after any op-count change (joint
+   combine+extract+offset SA).
 
-**Ceiling (op-count route, revised @ 1179):** co-bind floor ≈ 1079 → realized
+**Ceiling (op-count route, revised @ 1174):** co-bind floor ≈ 1079 → realized
 optimistic **1125–1145**; **1100** needs new structural wins + tail-gap shrink.
 
 ## Verify
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES: 1179 (PSPACE default 1)
+python tests/submission_tests.py   # OK, CYCLES: 1174 (PSPACE default 1)
 PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1199
 ```
 

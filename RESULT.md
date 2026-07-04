@@ -1,17 +1,34 @@
-# Result: 10-autotuner — 1230 → 1225 cycles (verified)
+# Result: 10-autotuner — 1230 → 1208 cycles (verified, and still searching)
 
-## Outcome
+## Outcome (so far)
 
-**1230 → 1225 cycles** (120.11x → **120.60x** over baseline 147734), verified by
-`python tests/submission_tests.py` (`OK`, 8 correctness runs on unseeded random
-inputs, `CYCLES: 1225`). `git diff origin/main -- tests/` is empty. Only
-`perf_takehome.py` changed on the submission path.
+**1230 → 1208 cycles** (120.11x → **121.97x**), verified by
+`python tests/submission_tests.py` (`OK`, 8 unseeded correctness runs,
+`CYCLES: 1208`). `git diff origin/main -- tests/` empty. Only `perf_takehome.py`
+on the submission path.
 
-The win comes from a **per-emit-position start-offset schedule** — a
-generalization of the uniform `p // step` diagonal stagger into an explicit
-length-K offset vector, found by an offline black-box search. This is exactly
-the autotuner thesis: a finer-grained knob reaches schedules the coarse scalar
-rule cannot express.
+Composed wins:
+1. **Per-position emit-offset schedule** — generalizing the uniform `p//step`
+   diagonal stagger to an explicit length-K offset vector (the autotuner
+   thesis: a finer knob reaches schedules the scalar rule cannot). Reached 1223
+   on the original op-graph.
+2. **K5-deferral op reduction** (adopted from lane `02-hash-opcount` per the
+   meta-lane mandate in DIRECTION.md §7) — defers the hash's trailing `^K5`
+   across round boundaries into K5-baked node broadcasts, deleting 224 valu
+   body ops (+ bundled dead-idx-vload / round-10-wrap removals). Dropped the
+   valu floor 1170 → 1112, re-swept head/tail 10/100 → 24/100 → **1215**.
+3. **Offset re-search on the K5 graph** — K5 shifted the argmin rotation (31→0)
+   and the drain composition, so the old offset schedule was stale. A fresh
+   black-box search found a strongly non-uniform emission order → **1208**.
+
+The K5-graph balance floor is ~1114 (alu≈valu≈1114, load 1056, flow 704), so
+1208 still has a ~94-cycle tail-scheduling gap; further offset/mask co-search
+is running.
+
+## History / prior milestone
+
+The first-half work established (all measured) that the **mask and config levers
+are exhausted on the original op-graph**, then found the offset schedule:
 
 ## What the direction predicted vs. what happened
 

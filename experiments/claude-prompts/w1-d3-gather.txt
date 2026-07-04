@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/01-exact-scheduler（已 merge 1208 基线）。
+
+任务：方向 #01 D3 gather tail 网格搜索（在 1208 op-graph 上）。
+
+必读（$VLIW_DOCS）：
+- 01-exact-scheduler.md（byproduct / D3 gather 部分）
+- merged-floor 的 RESULT.md（$VLIW_ROOT/RESULT.md）§D3 gather 表格
+
+实验：
+- 扫描 D3_GATHER_TAIL=0..8 × COMBINE_TAIL=80,90,100,110,120（HEAD=24）
+- 用 KernelBuilder._rotations shortlist [0,1,2,26,30,31] 加速
+- 记录 cycles；若有 <1208 的配置，全 rotation 确认
+
+验证：python tests/submission_tests.py 必须 OK。
+
+规则：只改 perf_takehome.py；不改 tests/；在 explore/01-exact-scheduler 分支 commit。

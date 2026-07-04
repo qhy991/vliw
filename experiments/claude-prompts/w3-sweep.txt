@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/10-autotuner @ 1179 基线。
+
+任务：方向 B3 — 三维联合 sweep（offset × combine mask × xor_mask）。
+
+背景：#10 在 1208 idx-space 落地；p-space @1179 需用 _POS_OFFSET_PSPACE_32x16 + _COMBINE_VALU_PSPACE_32x16。xor_mask 尚未联合优化。
+
+工具：experiments/anneal_cobind.py、experiments/w4_combine_sweep.py（需改 PSPACE=1）
+
+步骤：
+1. 先 git merge --abort 若有冲突，再 merge explore/merged-floor
+2. 扩展 sweep 支持 _xor_mask 和 champ_cobind.json seed
+3. 跑 rot=27 oracle + periodic full 32-rot confirm
+
+验证门：submission_tests CYCLES < 1179 才 ship
+
+规则：不改 tests/。

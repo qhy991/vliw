@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/03-round-structure（已 merge 1208 基线）。
+
+任务：#03 parity-carry phase-2 — d2/d3 用 re-permuted tree[2^d-1+p] 表。
+
+必读（$VLIW_DOCS）：
+- 03-round-structure.md（borrow mixing 修正）
+- INDEX.md
+
+要点：
+- phase-1 已在 merged-floor 落地；本分支做 phase-2
+- 需要 rem history（2-3 向量）；可与 #13 mem spill 协作
+- 禁止 raw parity bits 喂现有 vselect 条件
+
+验证：parity_check + algebra_check_ported + submission_tests，CYCLES ≤ 1208。
+
+规则：不改 tests/；在 explore/03-round-structure 分支 commit。

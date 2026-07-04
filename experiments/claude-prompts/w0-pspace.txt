@@ -1,0 +1,19 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/merged-floor（集成主分支）@ 1208 cycles。
+
+任务：实现方向 #12 p-space traverse（PSPACE=1 环境变量，默认 0）。
+
+必读（$VLIW_DOCS 或 ../../directions/）：
+- 12-pspace-traverse.md（含 July 2026 失败教训）
+- INDEX.md §执行顺序
+- 本目录 RESULT.md、DIRECTION.md
+
+核心：
+- idx scratch 槽改存 parity p，traverse 用 p←2p+rem（单 muladd）
+- gather: addr = fvp_p_d + p；d2/d3 mux 前物化 idx=(2^d-1)+p，禁止 p>>k
+- K5-defer: d0 用 p=1-rem_x（不是 2-rem_x）；d≥1 用 rem_true=rem_x^1
+- 落地后重扫 COMBINE_HEAD/TAIL + offset
+
+验证门（每步）：
+python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py
+
+规则：不改 tests/；CYCLES 不得回退 1208；在本分支 commit；赢家保留在 merged-floor。

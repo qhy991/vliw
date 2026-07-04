@@ -1,0 +1,19 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/10-autotuner（含 autotune 脚本）。
+
+任务：重扫调度旋钮 — COMBINE_HEAD/TAIL + offset（方向 #10 后续）。
+
+必读：
+- $VLIW_DOCS/10-autotuner.md
+- 本目录 autotune.py、grid_ht_under_offset.py、sweep 脚本
+- $VLIW_ROOT/RESULT.md、OPTIMIZATION_NOTES.md
+
+实验：
+- 在 1208 op-graph 上坐标下降 head/tail（16-32 × 80-130）
+- 可选：微调 _POS_OFFSET_32x16 或 combine mask
+- shortlist rotation 快筛，冠军全 32 rotation 确认
+
+目标：<1208 的合法配置 hard-code 到 perf_takehome.py。
+
+验证：submission_tests.py OK；CYCLES 严格下降才 commit。
+
+规则：在 explore/10-autotuner 分支 commit。

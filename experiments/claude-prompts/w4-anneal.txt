@@ -1,0 +1,14 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/merged-floor @ 1179 cycles。
+
+任务：后台长跑 experiments/anneal_cobind.py（8000 iter），监控并集成赢家。
+
+命令：cd $VLIW_ROOT && python experiments/anneal_cobind.py 2>&1 | tee experiments/anneal_cobind.log
+
+若发现 beat 1179：
+1. 将 champ_cobind.json 同步到 perf_takehome.py 的 _COMBINE_VALU_PSPACE_32x16 + _POS_OFFSET_PSPACE_32x16
+2. 跑全套验证门
+3. commit 到 merged-floor，更新 RESULT.md
+
+同时监控其他窗口 PR/结果，评估 cherry-pick。
+
+规则：不改 tests/；不得回退 1179。

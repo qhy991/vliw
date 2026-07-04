@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/merged-floor（集成主分支）@ 1179 cycles。
+
+任务：方向 #14 co-bind 抛光 + 集成。
+
+必读（$VLIW_DOCS）：INDEX.md、RESULT.md、directions/12-pspace-traverse.md
+
+当前状态：
+- PSPACE=1 默认，global best 1179（300 valu combines，champ_cobind.json）
+- p-space 后 binding 是 valu（~1099），alu 有 slack（~995）
+- experiments/anneal_cobind.py 已写好，继续跑 SA 搜 mask+offset
+
+目标：beat 1179，每次改进后更新 perf_takehome.py 常量并 commit。
+
+验证门：python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py
+
+规则：不改 tests/；CYCLES 不得回退 1179；赢家保留在 merged-floor。

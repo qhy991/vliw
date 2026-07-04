@@ -1,0 +1,17 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/13-mem-spill（从 merged-floor @ 1208 分出）。
+
+任务：方向 #13 mem spill — rem 历史溢出到内存，解锁 #03 phase-2。
+
+必读（$VLIW_DOCS）：
+- 13-mem-spill.md
+- 03-round-structure.md phase-2 部分
+- $VLIW_ROOT/RESULT.md scratch 画像
+
+目标：
+- traverse 后 vstore rem 到 mem high addresses
+- d2/d3 前 vload rem history（仅在 depth 0/1 窗口）
+- 评估净 op 收益 vs spill 成本
+
+验证门：parity_check + algebra_check_ported + submission_tests。
+
+规则：scratch 不得超限；CYCLES 不得回退 1208；在 explore/13-mem-spill 分支 commit。

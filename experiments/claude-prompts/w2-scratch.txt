@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/03-round-structure @ 1179 基线。
+
+任务：方向 B2 — scratch liveness 分析，评估 partial phase-2 可行性。
+
+背景：1179 上 scratch 1520/1536（16 free）。完整 phase-2 需 +256~768 words，mem spill 已 NO-GO。
+
+目标：
+1. dump build_kernel 后 scratch 生命周期图
+2. 评估 fvp_p_d 与 rem history 能否 overlap
+3. 若可回收 32+ words，尝试 p-native d2/d3 零 extract mux（非 idx-space 1197 移植）
+
+必读：directions/03-round-structure.md、explore/13-mem-spill/FINDING-13-mem-spill.md
+
+验证门：parity_check + algebra_check_ported + submission_tests
+
+规则：不改 tests/；不得回退 1179。

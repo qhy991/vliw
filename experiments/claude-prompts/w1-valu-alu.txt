@@ -1,0 +1,17 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/14-valu-alu @ 1179 基线。
+
+任务：方向 B1 — 把 d2/d3 mux 的 valu extract（&、<）迁移到 alu（v_alu_scalar）。
+
+背景：p-space @1179 上 valu binding ~1099，alu ~995 有 slack。1 valu→8 alu 在 floor 意义上净赢。
+
+必读：directions/03-round-structure.md、directions/12-pspace-traverse.md、RESULT.md
+
+实现要点：
+- 仅改 PSPACE=1 路径的 depth==2/depth==3 mux 段
+- d2: podd=p&1, hi=(1<p) 可改为 v_alu_scalar
+- 改后必须 re-anneal combine mask（anneal_cobind.py）
+- 禁止 p>>k borrow mixing
+
+验证门：parity_check + algebra_check_ported + submission_tests（不得回退 1179）
+
+规则：不改 tests/；赢家 cherry-pick 到 merged-floor。

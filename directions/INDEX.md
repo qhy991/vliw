@@ -1,6 +1,6 @@
 # VLIW Kernel Optimization — Direction Index (post-1208)
 
-**Global best:** `explore/merged-floor` @ **1185 cycles** (124.67×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1179 cycles** (125.30×), verified `tests/submission_tests.py`.
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 
@@ -43,12 +43,13 @@ re-sweep.**
 | 10 | per-position offset + combine mask | 1208 | `_POS_OFFSET_32x16`, head/tail 24/100 |
 | 03 | parity-carry **phase-1** | 0 realized | depth-1 `rem` vselect; −64 valu absorbed |
 | 01 | D3 gather port (tested) | 0 / +3 | `_d3_gather_tail=8` → 1211 on 1208 graph; **default off** |
-| **12** | **p-space traverse** (store `p` not `idx`) | **1185** | −248 valu; annealed offset+combine re-sweep; PSPACE default 1 |
+| **12** | **p-space traverse** (store `p` not `idx`) | **1184** | −248 valu; annealed offset+combine re-sweep; PSPACE default 1 |
+| **14** | **co-bind rebalance** (valu→alu combine shift) | **1179** | 347→300 valu combines; `anneal_cobind.py` |
 
-Tail gap @ 1185 (PSPACE=1): combined floor ≈ 1097 vs realized 1185 → **~88 cycles**
-windup/drain packing loss. Op-count drops shrink the floor; realized follows with lag
-unless mask/offset are re-tuned (see `experiments/anneal_pspace.py`). The 1208 profile
-above is the PSPACE=0 idx-space fallback.
+Tail gap @ 1179 (PSPACE=1): valu binding ≈ 1099 vs realized 1179 → **~80 cycles**
+packing loss. Post-#12 binding is **valu-only** (alu ~995, slack ~105). Op-count drops
+shrink the floor; realized follows with lag unless mask/offset are re-tuned
+(`experiments/anneal_cobind.py`). The 1208 profile above is the PSPACE=0 idx-space fallback.
 
 ---
 
@@ -56,10 +57,13 @@ above is the PSPACE=0 idx-space fallback.
 
 | Priority | # | Direction | Est. valu | Scratch | Conf | Worktree |
 |---|---|---|---|---|---|---|
-| 1 | 01 | D3 drain mux→gather + combine_tail re-sweep | −4…−8 | 0 | medium | `explore/merged-floor` |
-| 2 | 03 | parity-carry **phase-2** d2/d3 (re-permuted tables) | −320 | **+256…768** | medium | `explore/03-round-structure` |
-| 2b | 13 | **mem spill** for rem history (unlocks #03) | (enabler) | mem | low-med | TBD |
-| — | 12 | p-space traverse | **landed → 1185** | — | — | `explore/merged-floor` |
+| 1 | 14 | **co-bind rebalance** + joint anneal | 0 (relocate) | 0 | **high** | `explore/merged-floor` |
+| 2 | B1 | d2/d3 mux extract valu→alu | 0 (relocate) | 0 | medium | `explore/14-valu-alu` |
+| 3 | B2 | scratch liveness → partial phase-2 | −64…−128 | TBD | low-med | `explore/03-round-structure` |
+| — | 01 | D3 gather on p-space | — | 0 | **falsified** | archive |
+| — | 13 | mem spill | — | mem | **NO-GO** | archive |
+| — | 12 | p-space traverse | **landed → 1184** | — | — | `explore/merged-floor` |
+| — | 14 | co-bind rebalance | **landed → 1179** | — | — | `explore/merged-floor` |
 | — | 02 | K5-deferral | landed | — | — | `explore/02-hash-opcount` |
 | — | 11 | dead-idx | landed | — | — | `explore/11-dead-code-idx` |
 

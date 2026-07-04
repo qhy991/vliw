@@ -280,13 +280,14 @@ V = VLEN
 # (1215 -> 1208). Correctness-safe: offsets only reschedule independent vector
 # work (every vector still runs every round with identical ops).
 _POS_OFFSET_32x16 = [6, 5, 2, 9, 8, 0, 1, 8, 7, 1, 8, 3, 5, 3, 3, 9,
-                     9, 7, 3, 2, 5, 6, 5, 4, 3, 1, 7, 8, 9, 1, 0, 1]
+                     9, 7, 3, 2, 5, 6, 5, 4, 3, 2, 7, 8, 9, 1, 0, 3]
 
-# Combine instances (in per-rotation emit order) forced onto the valu engine
-# IN ADDITION to the head/tail default, for the (K_VEC=32, rounds=16) shape
-# (found by coordinate-descent under the offset schedule). Empty pending the
-# K5-graph re-search.
-_COMBINE_VALU_EXTRA_32x16 = ()
+# Combine instances (in per-rotation emit order) whose engine is overridden
+# relative to the head/tail default, for the (K_VEC=32, rounds=16) shape.
+# Found by alternating coordinate descent on the K5 graph (1202 -> 1198).
+#   _VALU_EXTRA: force onto valu;  _ALU_EXTRA: force onto alu.
+_COMBINE_VALU_EXTRA_32x16 = (1271,)
+_COMBINE_ALU_EXTRA_32x16 = (1461,)
 
 # ---- p-space (#12) champion schedule ---------------------------------------
 # p-space deletes ~248 valu ops; post-#12 binding flipped to valu (~1107) with
@@ -340,8 +341,8 @@ class KernelBuilder:
         # exactly, so it is always correctness-safe. Counts tuned by sweep.
         self._combine_no = 0          # combines emitted so far this rotation
         self._combine_total = 0       # total combines expected this rotation
-        self._combine_head = 24       # vectorize first N combine-instances
-        self._combine_tail = 100      # vectorize last N combine-instances
+        self._combine_head = 32       # vectorize first N combine-instances
+        self._combine_tail = 130      # vectorize last N combine-instances
         # Autotuner knobs. When _combine_mask is not None it is an explicit
         # per-combine-instance bool list (True -> valu/1-slot, False -> alu/8-
         # slot) indexed in per-rotation emit order, overriding the head/tail
@@ -986,6 +987,8 @@ class KernelBuilder:
                      for gi in range(total)]
                 for gi in _COMBINE_VALU_EXTRA_32x16:
                     m[gi] = True
+                for gi in _COMBINE_ALU_EXTRA_32x16:
+                    m[gi] = False
             self._combine_mask = m
 
         def gen_body(rot):

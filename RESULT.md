@@ -32,6 +32,13 @@ binding. Moving 47 middle combines back to alu (300 on valu) lowers the co-bind
 floor without touching correctness. See `experiments/anneal_cobind.py`,
 `champ_cobind.json`.
 
+## #10 idx-space re-sweep — LANDED (PSPACE=0: 1208 → 1199, −9)
+
+Cherry-picked W4 (`explore/10-autotuner`) alternating coordinate-descent wins onto
+the merged-floor idx-space graph (includes #03 phase-1; not bit-identical to the
+10-autotuner K5 graph, so 1198→1199 not 1198). Changes: head/tail **32/130**,
+offset idx25/31 tweaks, interior mask gi=1271→valu / gi=1461→alu.
+
 ## Prior engine profile @ 1208 (PSPACE=0)
 
 ```
@@ -47,6 +54,7 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | 03 ph.1 | depth-1 parity-carry (`rem` vselect) | 1208 | −64 valu, absorbed |
 | 12 | p-space traverse + re-sweep | 1184 | −248 valu; −24 cycles |
 | **14** | **co-bind rebalance (300 valu combines)** | **1179** | **−5 cycles** |
+| 10b | idx-space head/tail+mask re-sweep | 1199 | PSPACE=0 fallback only |
 
 ## Falsified on p-space graph
 
@@ -70,7 +78,7 @@ optimistic **1125–1145**; **1100** needs new structural wins + tail-gap shrink
 ```bash
 python parity_check.py && python algebra_check_ported.py
 python tests/submission_tests.py   # OK, CYCLES: 1179 (PSPACE default 1)
-PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1208
+PSPACE=0 python tests/submission_tests.py   # OK, CYCLES: 1199
 ```
 
 ## Env knobs

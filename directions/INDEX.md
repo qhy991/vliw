@@ -16,7 +16,7 @@ under `explore/<key>/` on branch `explore/<key>`, seeded with `DIRECTION.md`.
 
 | # | Direction | Attack surface | Est (low–high) | Conf |
 |---|---|---|---|---|
-| 11-dead-code-idx **(NEW)** | Dead-idx elimination: round-10 traverse+wrap and idx vloads are dead code | valu/flow/load op-count (floor drop **measured**: −17 combined) | 1215–1230 | proven deletion; medium for standalone cycles |
+| 11-dead-code-idx **(NEW)** | Dead-idx elimination: round-10 traverse+wrap and idx vloads are dead code | valu/flow/load op-count (floor drop **measured**: −17 combined) | **1228 measured** (coarse re-sweep); 1220–1228 | proven |
 | 02-hash-opcount | Defer stage-5 K5 into node broadcasts (**corrected: 7 rounds, −224 valu**) | valu-op-count (binding floor 1176→1138.5) | 1180–1220 | medium-high |
 | 03-round-structure | Parity-carry traversal (**corrected: re-permuted tables keyed on raw parities**) | valu-op-count (binding floor) | 1170–1225 | medium |
 | 10-autotuner | Global Multi-Knob Autotuner (SA + coordinate-descent over the combine mask) | windup-drain + scheduler-suboptimality | 1195–1226 | medium |
@@ -70,12 +70,13 @@ This is the pragmatic capture-play for the entire windup/drain cluster: it subsu
 
 ### Ranking, best-to-worst by expected value (payoff × probability) — REVISED AFTER SECOND-PASS REVIEW
 
-0. **#11 [11-dead-code-idx] (NEW) — land FIRST.** The only direction that is already
-   implemented and measured: deletions land exactly as predicted (−128 valu, −32 flow,
-   −63 load), correctness verified on 3 seeds. Effort is hours. Naive drop-in measured
-   1234 (stale head/tail knobs eat the floor drop — a live demonstration that floor drops
-   need a re-tune to cash out); even if the re-tune only recovers part of it, the lowered
-   floors are the base every other direction should stack on.
+0. **#11 [11-dead-code-idx] (NEW) — land FIRST; already beats 1230.** The only direction
+   that is implemented and measured: deletions land exactly as predicted (−128 valu,
+   −32 flow, −63 load), correctness verified on 3 seeds. Naive drop-in measured 1234
+   (stale head/tail knobs eat the floor drop), but the first coarse 10-config re-sweep
+   found **(head=20, tail=120) → 1228**, with 1229/1230 neighbors corroborating. Effort
+   remaining is a finer grid + the standard correctness gate. The lowered floors are the
+   base every other direction should stack on.
 
 1. **#2 [02-hash-opcount]** — Still the biggest single lever, but **corrected**: net
    deletion is 224 valu ops (7 deferral rounds), not 512; floor drop is ~37 valu-floor

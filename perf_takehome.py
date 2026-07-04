@@ -244,9 +244,6 @@ class KernelBuilder:
         self._d3_no = 0
         self._d3_total = 0
         self._d3_gather_tail = int(_os.environ.get("D3_GATHER_TAIL", "8"))
-        self._d2_no = 0
-        self._d2_total = 0
-        self._d2_gather_tail = int(_os.environ.get("D2_GATHER_TAIL", "0"))
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
 
@@ -429,10 +426,7 @@ class KernelBuilder:
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))              # node = b2 ? l2_1 : l2_0
         else:
-            self.v_alu("+", addr, c["fvp_v"], idx)  # addr = fvp + idx
-            for i in range(V):
-                self.op("load", ("load", node + i, addr + i),
-                        reads=(addr + i,), writes=(node + i,))
+            self._gather_node(node, addr, idx, c)  # depth >= 4: 8 scalar gathers
         # val = val ^ node  (node now free). On no-gather rounds (depth 0/1/2/3
         # -- depth 3 now uses an 8-way vselect mux) the load engine is idle,
         # but valu is still busy with the hash -- so we put this XOR on ALU
@@ -717,12 +711,10 @@ class KernelBuilder:
             # vector runs every round; 3 hash combines per (vec, round).
             self._combine_no = 0
             self._combine_total = 3 * K * rounds
-            # depth-d round-instances per rotation: one per (vec, round) whose
-            # r % h1 == d. Used by the drain-tail mux->gather policy.
+            # depth-3 round-instances per rotation: one per (vec, round) whose
+            # r % h1 == 3. Used by the drain-tail mux->gather policy.
             self._d3_no = 0
             self._d3_total = K * sum(1 for r in range(rounds) if r % h1 == 3)
-            self._d2_no = 0
-            self._d2_total = K * sum(1 for r in range(rounds) if r % h1 == 2)
             perm = [(j - rot) % K for j in range(K)]
             ppos = {perm[p]: p for p in range(K)}
             n_diag = (K + step - 1) // step + rounds - 1

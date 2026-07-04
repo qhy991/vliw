@@ -116,6 +116,7 @@ its neighborhood.
 | **D2_GATHER_TAIL** (depth-2 mux→gather) | 1224, no change on D3=8 | only 3 vselects/vec; less drain-concentrated |
 | **TOP_TAIL** (hash t-ops valu→alu in drain) | 12→1222, 48→1227, monotone worse | t-ops on the serial hash chain: splitting 1 valu→8 alu adds latency, doesn't cut it, and adds slot pressure |
 | **VXOR_TAIL** (val^node valu→alu in drain) | 8→1219, 16→1226, worse | same — val^node is the *first* op of each round's chain |
+| **VXOR_HEAD** (val^node alu→valu in windup) | 4→1221, 8→1220, worse | windup alu is 98-100% w/ 24/150 alu-full+valu-slack cycles, but val^node is chain-serial: moving to valu just contends with the hash muladds/combines |
 | **STEP** (diagonal stagger) | 4 optimal; 2→1236, 3→1235, 5→1239, 6→1257 | notes' finding holds post-op-mix-change |
 | **SCHED_KEY** (5 priority keys) | 0 & 2 →1218, others regress | `(-hgt,-succ,i)` still optimal |
 | **COMBINE_HEAD** re-sweep | 10 optimal (flat 6-14 ≈ 1218-1220; 0→1226, 40→1247) | windup already near-balanced |

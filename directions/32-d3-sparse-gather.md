@@ -1,8 +1,8 @@
-# Direction W6-W0 (E2 mirror): depth-3 sparse gather mask — **WIN 1134→1121**
+# Direction W6-W0 (E2 mirror): depth-3 sparse gather mask — **WIN 1134→1120**
 
-**Status:** LANDED @ 1121 (2026-07-06). Branch `explore/w6-d3-sparse`.
+**Status:** LANDED @ 1120 (2026-07-06). Branch `explore/w6-d3-sparse`.
 Env `D3_GATHER_MASK` (JSON 0/1 over 64 d3 emit-order instances); shipped default
-`{0,1,2,3,36,37,40,43,45,49,58}`; `D3_GATHER_MASK=[]` disables → 1134.
+`{0,1,2,3,4,37,39,40,46,54,58}`; `D3_GATHER_MASK=[]` disables → 1134.
 
 ## Thesis (and why it is the *mirror* of E2, not a copy)
 E2's D4_COLD win removed depth-4 **scalar gathers** from the binding **load**
@@ -36,7 +36,8 @@ floor costs. The realized-vs-floor tail gap is the lever.
 |---|---:|---|
 | single sweep | 1133 | {42} |
 | combo/greedy (drain-biased) | 1132 | {42,50,55} + ties (local opt) |
-| full-space SA | **1121** | **{0,1,2,3,36,37,40,43,45,49,58}** |
+| full-space SA | 1121 | {0,1,2,3,36,37,40,43,45,49,58} |
+| SA refine (dual-gate) | **1120** | **{0,1,2,3,4,37,39,40,46,54,58}** |
 
 **Lesson:** the d3 sparse-mask axis MUST be searched with full-space SA, not
 benefit-window combos. The combo search under-explored it by 11 cycles.
@@ -48,19 +49,20 @@ Both defaults ship.
 
 ## Mechanism detail
 - d3 rounds = {3, 14}; 64 d3 instances (2 rounds × K=32), emit-order interleaved by
-  the 8-wide diagonal stagger. The champion mask draws from both: {0,1,2,3} are
-  round-3 (head) slots, {36,37,40,43,45,49,58} are round-14 (drain) slots.
+  the 8-wide diagonal stagger. The champion mask draws from both: {0,1,2,3,4} are
+  round-3 (head) slots, {37,39,40,46,54,58} are round-14 (drain) slots.
 - Gather path needs the `fvp_p_3` broadcast (was gated behind `D3_GATHER_TAIL>0`);
   the mask branch now also allocates it. With the default mask always active this
   +1 setup const is live (funds the gathers).
 
 ## Gate (all pass)
 `parity_check.py` 0 violations · `algebra_check_ported.py` ALL-PASS ·
-`tests/submission_tests.py` **1121** · `PSPACE=0` **1177** (was 1187, improved).
+`tests/submission_tests.py` **1120** · `PSPACE=0` **1180** (≤1187 gate).
 
 ## Remaining headroom
 d3 sparse gather is a strong tail/packing lever (−13, not the −2 the sweep implied).
-A follow-on multi-restart SA (`experiments/anneal_d3_mask2.py`, seeded from 1121) is
-probing for more. The load engine still binds; a future floor *drop* still requires
-a scratch-free d4 gather cut (#26 gated) — d3 gather packs the tail, it does not move
-the floor.
+Progression 1134→1132 (combo local opt)→1121 (full-space SA)→1120 (SA refine):
+diminishing returns confirm the d3-sparse axis is **converged around 1120**. Further
+d3 gains are <1 cycle. The remaining roofline headroom (ceiling 814) is on the
+**load-floor axis** — a scratch-free d4 gather cut (#26 gated) — not more d3 masking.
+Probes: `anneal_d3_mask.py` (full-space), `anneal_d3_mask3.py` (dual-gate refine).

@@ -40,11 +40,16 @@ Full detail: [`RESULT.md`](../RESULT.md).
 
 ## Active directions — Wave-3 (sub-1000 path)
 
-| Priority | # | Direction | Worktree | Depends |
+| Priority | # | Direction | Worktree | Status |
 |---|---|---|---|---|
-| **1** | 25 | scratch reclaim ≥80w (d4 gate) | `explore/25-scratch-reclaim-d4` | — |
-| **2** | 26 | d4 gather cut → ~1088 band | `explore/26-d4-gather-cut` | #25 |
-| **3** | 27 | alu repack (re-tune pass after #26) | `explore/27-alu-repack-post-load` | **#26 — NO-GO@1156, parked** |
+| — | 25 | scratch reclaim (recycler) | `merged-floor` | **LANDED** 78 free (ebcbf00) |
+| — | 26 | d4 gather cut → ~1088 band | `merged-floor` | **NO-GO by real impl** (round-4: best 1251, +99) |
+| — | 27 | alu repack (re-tune after #26) | — | **MOOT** (#26 NO-GO, precondition never met) |
+
+**All known load-floor levers are exhausted.** The d4 mux works and drops the
+load floor to 810, but the 128w table can only be funded by node/addr pooling
+whose penalty (+69c) exceeds the cut's prize (−44c). Details: `LESSONS.md`,
+`experiments/.kersor-vliw/round-4.md`.
 
 ---
 

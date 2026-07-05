@@ -444,11 +444,11 @@ class KernelBuilder:
         # a set bit converts that d3 instance to a scalar gather. The E2 D4_COLD
         # win removed d4 gathers from the binding load engine; d3 is the mirror --
         # mux->gather ADDS load, yet a full-space SA over the 64 emit-order slots
-        # finds a rich sparse mask spanning BOTH d3 rounds (round-3 slots {0,1,2,3}
-        # AND round-14 drain slots) that packs the greedy schedule much tighter:
-        # 1134->1121. An anchored combo search stalls at a 1132 local optimum; the
-        # win needs the joint round-3+round-14 mask. parity/algebra bit-exact,
-        # PSPACE=0 1177 (<=1187). Shipped default below; D3_GATHER_MASK=[] disables.
+        # finds a rich sparse mask spanning BOTH d3 rounds (round-3 head slots
+        # {0,1,2,3,4} AND round-14 drain slots) that packs the greedy schedule much
+        # tighter: 1134->1120. An anchored combo search stalls at a 1132 local
+        # optimum; the win needs the joint round-3+round-14 mask. parity/algebra
+        # bit-exact, PSPACE=0 1180 (<=1187). Shipped default below; []=disable.
         _d3gm = _os.environ.get("D3_GATHER_MASK")
         self._d3_gather_mask = None
         if _d3gm is not None:
@@ -456,7 +456,7 @@ class KernelBuilder:
             _parsed = [] if not _d3gm.strip() else _json_d3gm.loads(_d3gm)
             self._d3_gather_mask = [bool(x) for x in _parsed] or None
         else:
-            _d3champ = (0, 1, 2, 3, 36, 37, 40, 43, 45, 49, 58)
+            _d3champ = (0, 1, 2, 3, 4, 37, 39, 40, 46, 54, 58)
             self._d3_gather_mask = [(i in _d3champ) for i in range(64)]
         # #26 d4-gather-cut: replace the first _d4_mux of the 64 depth-4 gather
         # instances (8 scalar loads each) with a 16-way vselect tournament over

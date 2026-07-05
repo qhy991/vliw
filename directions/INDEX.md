@@ -1,147 +1,71 @@
-# VLIW Kernel Optimization — Direction Index (post-1208)
+# VLIW Kernel Optimization — Direction Index (@ 1156)
 
-**Global best:** `explore/merged-floor` @ **1174 cycles** (125.84×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1156 cycles** (127.80×), verified `tests/submission_tests.py`.
+
+**Do-not-repeat registry:** [`LESSONS.md`](LESSONS.md) — read before opening any worktree.
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 
 ---
 
-## Core conclusion (July 2026)
+## Engine profile @ 1156 (PSPACE=1)
 
-**Scheduling is exhausted.** CP-SAT on the drain tail proved the greedy scheduler is within
-**≤1 cycle** of optimal for the fixed op graph; **99% of bundles have at least one engine
-saturated**. Per-position offset search (#10) captured the windup/drain repacking prize
-(1230 → 1208). Remaining scheduling knobs (#01 CP-SAT, #04 modulo-pipeline, #09
-depth-interleave) cannot move the binding floor meaningfully — at best **≤3 cycles**.
+```
+load  2140  floor 1070.0  ← BINDING
+alu  12440  floor 1036.7
+valu  6017  floor 1002.8
+flow    704  floor  704.0
+realized 1156 | tail gap ~86 (intrinsic load-idle in windup/drain until floor drops)
+```
 
-**The only lever left is deleting ops** — and gains must be judged on the **combined
-alu+valu floor**, not valu alone:
+**D4_FREE probe (theoretical):** delete all d4 gathers → **1088**, alu binds.
 
-| Engine | ops @ 1208 | floor |
+---
+
+## Landed stack (summary)
+
+| # | Change | cycles |
 |---|---|---|
-| valu | 6668 | 1111.3 |
-| alu | 13344 | 1112.0 |
-| load | 2133 | 1066.5 |
-| flow | 704 | 704.0 |
-| store | 32 | 16.0 |
+| 11+02+10 | dead-idx, K5, offset+combine | 1208 |
+| 12 | p-space traverse | 1184 |
+| 14 | co-bind rebalance | 1179 |
+| 15a | extract valu→alu | 1174 |
+| 15 | s2+s3 muladd fusion | 1157 |
+| 18 | micro purges | **1156** |
 
-alu and valu are **co-binding** (~1111.5 combined). Deleting valu ops only pays off if
-combine-mask rebalancing moves enough ALU combine work back to valu (each combine: alu −8,
-valu +1). **Every structural op drop must be followed by a combine-head/tail + offset
-re-sweep.**
-
-**Multi-core is dead:** `N_CORES = 1` in `problem.py` (comment: this build uses single core).
+Full detail: [`RESULT.md`](../RESULT.md).
 
 ---
 
-## What's landed (merged-floor stack)
+## Active directions — Wave-3 (sub-1000 path)
 
-| # | Direction | Δ cycles | Notes |
-|---|---|---|---|
-| 11 | dead-idx elimination | part of −22 | skip round-10 traverse/wrap; drop idx vload |
-| 02 | K5-deferral (7 rounds) | part of −22 | −224 valu; selective defer across gather boundary |
-| 10 | per-position offset + combine mask | 1208 | `_POS_OFFSET_32x16`, head/tail 24/100 |
-| 03 | parity-carry **phase-1** | 0 realized | depth-1 `rem` vselect; −64 valu absorbed |
-| 01 | D3 gather port (tested) | 0 / +3 | `_d3_gather_tail=8` → 1211 on 1208 graph; **default off** |
-| **12** | **p-space traverse** (store `p` not `idx`) | **1184** | −248 valu; annealed offset+combine re-sweep; PSPACE default 1 |
-| **14** | **co-bind rebalance** (valu→alu combine shift) | **1179** | 347→300 valu combines; `anneal_cobind.py` |
-| **15** | **d2/d3 extract valu→alu** (joint anneal) | **1174** | 57/320 extracts→alu; tail-pack; `anneal_extract.py` |
-
-Tail gap @ 1174 (PSPACE=1): valu binding ≈ 1099 vs realized 1174 → **~75 cycles**
-packing loss. Post-#12 binding is **valu-only** (alu ~997, slack ~102). Op-count drops
-shrink the floor; realized follows with lag unless mask/offset are re-tuned
-(`experiments/anneal_cobind.py`). The 1208 profile above is the PSPACE=0 idx-space fallback.
+| Priority | # | Direction | Worktree | Depends |
+|---|---|---|---|---|
+| **1** | 25 | scratch reclaim ≥80w (d4 gate) | `explore/25-scratch-reclaim-d4` | — |
+| **2** | 26 | d4 gather cut → ~1088 band | `explore/26-d4-gather-cut` | #25 |
+| **3** | 27 | alu repack post-load drop | `explore/27-alu-repack-post-load` | #26 or D4_FREE probe |
 
 ---
 
-## Active directions (ranked — op-count route)
+## Closed — Wave-2 NO-GO (@ 1156)
 
-| Priority | # | Direction | Est. valu | Scratch | Conf | Worktree |
-|---|---|---|---|---|---|---|
-| 1 | B2 | scratch liveness → partial phase-2 (structural) | −64…−128 | TBD | low-med | `explore/03-round-structure` |
-| — | 15 | d2/d3 extract valu→alu (joint anneal) | 0 (relocate) | 0 | **landed → 1174** | `explore/merged-floor` |
-| — | 14 | co-bind rebalance | **landed → 1179** | — | — | `explore/merged-floor` |
-| — | 01 | D3 gather on p-space | — | 0 | **falsified** | archive |
-| — | 13 | mem spill | — | mem | **NO-GO** | archive |
-| — | 12 | p-space traverse | **landed → 1184** | — | — | `explore/merged-floor` |
-| — | 02 | K5-deferral | landed | — | — | `explore/02-hash-opcount` |
-| — | 11 | dead-idx | landed | — | — | `explore/11-dead-code-idx` |
+| # | Direction | Verdict |
+|---|---|---|
+| 20 | d4mux engine-split | scratch + wrong bottleneck |
+| 21 | d5 partial mux | dominated by d4 |
+| 22 | traverse phase-2 valu | load-bound |
+| 23 | mem-bake K5 | idle slots + valu absorbed |
+| 24 | tailgap setup pipe | intrinsic load-idle |
+| 19a | 2-round fuse | algebra NO-GO |
 
-**Ceiling estimate** (all op-count wins + rebalancing): combined floor ≈ **1035**;
-realized optimistic **1125–1150**, conservative **~1170**. Below that requires changing
-the hash itself — #02 proved **K5 is the only deferrable constant** (others blocked by
-multiplication nonlinearity).
+Details: [`LESSONS.md`](LESSONS.md).
 
 ---
 
-## Deprecated / falsified directions
-
-| # | Direction | Verdict | Why |
-|---|---|---|---|
-| **01** | exact-scheduler (CP-SAT) | **FALSIFIED** | Greedy ≤1 cycle from optimal; drain prize ≤3 cycles. **Byproduct kept:** drain-tail mux→gather (`_d3_gather_tail`) — port to merged-floor, re-sweep on 1208 graph. |
-| **04** | modulo-pipeline | **DEPRECATED** | Same windup/drain target as #10; offset search already captured it. |
-| **09** | data-layout / depth-interleave | **DEPRECATED** | Same; CP-SAT shows middle band triple-saturated. |
-| **05** | cross-vector-share | **DEPRECATED** | flow not binding; overlaps #08. |
-| **06** | regalloc-hazards | **DEPRECATED** (refutation only) | Rename-to-parallelize disproved; no unnamed op win. |
-| **07** | load-engine-lut | **DEPRECATED** (self-refuted) | load floor below binding; gather-reduction marginal on 1208 graph. |
-| **08** | flow-vselect | **LOW / mostly superseded** | §3.3 wrap hack dead (#11); depth-3 flow relief minor on 1208 graph. |
-| **10** | autotuner | **LANDED (manual)** | Offset vector + combine mask found offline; SA still useful after each op drop. |
-
----
-
-## Recommended execution order (new machine)
-
-All steps on branch `explore/merged-floor`, commit after each `submission_tests.py` pass.
-
-1. **#12 p-space traverse — LANDED (1185).** `p ← 2p+rem` muladd; gather
-   `addr = fvp_p_d + p`; d1 cond = `p`; d2 `p&1`,`1<p`; d3 natural table `[7..14]`.
-   Node lookups use clean bits of `p` (NOT `p>>k` — that borrow-mixes). Re-swept
-   offset + combine mask via `experiments/anneal_pspace.py` (rot=27 oracle).
-2. **#01 D3 gather tail** — `D3_GATHER_TAIL=6..8` × combine grid on the **post-p-space**
-   graph (needs its own anneal; PSPACE=1 D3_GATHER_TAIL=6 = 1203 with current mask).
-3. **#13 mem spill** (if needed) — vstore/vload rem ring to mem; unlocks #03 phase-2.
-4. **#03 phase-2** d2/d3 re-permuted parity tables — **−320 valu** after scratch solved.
-5. After **every** op-count change: re-run `experiments/anneal_pspace.py` (joint
-   offset + combine mask search).
+## Verify gate
 
 ```bash
-# verify gate (every commit)
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # must print OK, CYCLES <= best
+python tests/submission_tests.py   # OK, CYCLES <= 1156
+PSPACE=0 python tests/submission_tests.py
 ```
-
----
-
-## Worktree map
-
-```
-vliw/                              # main repo; docs in directions/
-explore/merged-floor/              # GLOBAL BEST 1208 — integration branch
-explore/02-hash-opcount/           # K5-deferral (landed → 1215 alone)
-explore/10-autotuner/              # offset search (landed → 1208)
-explore/11-dead-code-idx/          # dead idx (landed → 1228 alone)
-explore/03-round-structure/        # parity-carry phase-2 experiments
-explore/01-exact-scheduler/        # CP-SAT archive + D3 gather origin
-explore/{04,05,06,07,08,09}-*/     # deprecated archives
-```
-
-Setup on a fresh machine: `scripts/setup-worktrees.sh` (see `explore/README.md`).
-
----
-
-## Direction files
-
-| File | Status |
-|---|---|
-| [11-dead-code-idx.md](11-dead-code-idx.md) | landed |
-| [02-hash-opcount.md](02-hash-opcount.md) | landed |
-| [10-autotuner.md](10-autotuner.md) | landed (manual sweep) |
-| [03-round-structure.md](03-round-structure.md) | phase-1 landed; phase-2 scratch-blocked |
-| [12-pspace-traverse.md](12-pspace-traverse.md) | **landed → 1185** |
-| [01-exact-scheduler.md](01-exact-scheduler.md) | falsified; byproduct noted |
-| [04-modulo-pipeline.md](04-modulo-pipeline.md) | deprecated |
-| [09-data-layout.md](09-data-layout.md) | deprecated |
-| [05-cross-vector-share.md](05-cross-vector-share.md) | deprecated |
-| [06-regalloc-hazards.md](06-regalloc-hazards.md) | deprecated |
-| [07-load-engine-lut.md](07-load-engine-lut.md) | deprecated |
-| [13-mem-spill.md](13-mem-spill.md) | proposed (unlocks #03) |

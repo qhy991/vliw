@@ -126,7 +126,7 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | **18** | **micro purges (zero/fvp_v/nn_v/fvp_p_3 gates)** | **1156** | **stacked −1; +34 scratch (16→50 free)** |
 | 10b | idx-space head/tail+mask re-sweep | 1190 | PSPACE=0 fallback only |
 
-## Falsified on p-space graph
+## Falsified on p-space graph (@ 1156 frontier)
 
 | Direction | Result | Verdict |
 |---|---|---|
@@ -135,18 +135,21 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | #13 mem spill | NO-GO | load floor blocks |
 | co-bind anneal (mask+offset) | full-32 = 1180 | no win beyond #14/#15 |
 | D3-gather anneal | stuck 1184 | no win |
+| **#20** d4mux engine-split | scratch 49≪128; D4_FREE→1088 but alu binds | NO-GO wrong shape |
+| **#21** d5 partial mux | min floor 1060 @ k=8 | NO-GO |
+| **#22** traverse phase-2 | load-bound; stub −5 max | NO-GO @ 1156 |
+| **#23** mem-bake K5 | windup idle 102; valu absorbed | NO-GO |
+| **#24** tailgap pipe | setup load-bound; omni stuck 1156 | NO-GO @ 1156 |
+| **#19a** 2-round fuse | algebra kill | NO-GO |
 
-## Remaining levers (ranked)
+See **`directions/LESSONS.md`** for do-not-repeat registry and Wave-3 (#25–#27).
 
-1. **load floor (1070.5) is now binding** — after #15's −512 valu, valu (1013.5)
-   dropped below load, so further valu-op deletion is absorbed. The two prizes
-   are now the **load floor** (2141 loads/rotation = 8 scalar gathers/deep-round)
-   and the **~86-cycle tail gap**. Reducing gathers (vectorized depth-≥2 loads,
-   or fewer deep rounds) is the new highest-value structural lever.
-2. **tail-gap shrink** — windup/drain packing; the re-anneal took gap 75→86 as it
-   traded valu for tighter load packing, so there may be offset headroom left.
-3. Re-run `experiments/anneal_extract.py` after any op-count change (joint
-   combine+extract+offset SA).
+## Remaining levers (ranked @ 1156)
+
+1. **#25 scratch reclaim ≥80w** — gate for d4 table (49 free today, need 128).
+2. **#26 d4 gather cut** — D4_FREE probe → **1088** band (−68 load-floor prize).
+3. **#27 alu repack** — after #26, alu 1036.7 becomes wall.
+4. ~~load mux via flow~~ / ~~valu deletion~~ / ~~tail repack~~ / ~~mem-bake~~ — see LESSONS.md.
 
 **Ceiling (revised @ 1156):** load floor 1070.5 is the hard wall for the op-count
 route; realized **1156** sits ~85 above it. Beating ~1130 needs the load floor

@@ -1,0 +1,11 @@
+你是 VLIW 内核优化 agent。worktree: explore/25-scratch-reclaim-d4 @ 1156 cycles。
+
+必读：$VLIW_DOCS/LESSONS.md（禁止重踩的方向）、$VLIW_DOCS/25-scratch-reclaim-d4.md
+
+任务：#25 — 在 **不增加 alu ops** 前提下 reclaim ≥80 scratch words（目标 scratch_ptr≤1408，128 free）。这是 #26 d4 gather cut 的前置门。
+
+禁止：deep-gather addr-add 迁到 alu（#20 已证伪 → ~1493）。
+
+方法：dump scratch 生命周期 → 逐项 reclaim（tree_lo 复用、scalar fvp_p、向量字段 alias 等）→ 每项单独验证门。
+
+/loop 45m 继续 #25 scratch-reclaim：每 reclaim 一项→parity+algebra+submission_tests→commit，达到 128 free 或全部候选耗尽后停止并写结论。

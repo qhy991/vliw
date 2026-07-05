@@ -1,0 +1,11 @@
+你是 VLIW 内核优化 agent。worktree: explore/26-d4-gather-cut @ 1156 cycles。
+
+必读：$VLIW_DOCS/LESSONS.md、$VLIW_DOCS/26-d4-gather-cut.md、#20 NO-GO 教训（不要 flow-only select）
+
+任务：#26 — 实现 depth-4 gather→mux，目标 D4_FREE 带 ~1088 cycles。
+
+前置门：scratch_ptr≤1408（128 free）。若未满足，只做 D4_FREE 探针 + 设计文档，**不改 perf_takehome.py**。
+
+第一步：确认 D4_FREE 探针在 HEAD 上仍 ≈1088（若无 env flag，先实现 probe-only flag）。
+
+/loop 45m 继续 #26 d4-gather-cut：scratch 门通过→实现 tournament→验证→omni_anneal re-seed→commit，beat 1156 或 NO-GO 后停止。

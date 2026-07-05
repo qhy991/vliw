@@ -1,0 +1,11 @@
+你是 VLIW 内核优化 agent。worktree: explore/27-alu-repack-post-load @ 1156 cycles。
+
+必读：$VLIW_DOCS/LESSONS.md、$VLIW_DOCS/27-alu-repack-post-load.md
+
+任务：#27 — load floor 下降后 alu 成为 binding wall 时的 alu→valu repack。
+
+在 1156 无 #26 时：只做 **D4_FREE 探针 schedule** 上的 engine 分析 + omni_anneal 试跑，预期 NO-GO 则写文档停止。
+
+若 #26 已 land：对新品 graph 跑 omni_anneal（bias alu→valu），promote champ 需 full-32 + correctness gate。
+
+/loop 45m 继续 #27 alu-repack：有 post-load graph 则 anneal，否则只做探针分析并 NO-GO 归档。

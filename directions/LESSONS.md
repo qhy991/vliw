@@ -72,7 +72,7 @@ materially below 2140), then re-run omni-anneal + #24 levers.
 | V5 | `#03` phase-2 rem-ring | needs **+256–768** scratch; 49 free | after ≥200 scratch reclaimed |
 | V6 | `#13` mem spill | load floor blocks | same as V5 |
 | V7 | More valu deletion while load=1070 | any −N valu with N<67 floor-slots | load floor drops first |
-| V8 | `#27` alu→valu repack @ 1156 | alu(1036.7) **sub-floor** vs load(1070); perfect repack x≈41 → alu=valu≈1009 but binding stays **load 1070**, realized 1156; omni-anneal combine+extract+offset 4k iters found 0 improving moves | load floor drops (#26 lands) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
+| V8 | `#27` alu→valu repack @ 1156/1152 | alu(1036.7) **sub-floor** vs load(1070→1064.5 after #28); perfect repack x≈41 → alu=valu≈1009 but binding stays **load**, realized unchanged; omni-anneal combine+extract+offset 4k iters found 0 improving moves. **Re-priced @1152 (#28): still NO-GO** (load 1064.5 still >alu 1036.7, ~28c gap) | load floor drops **below alu 1036.7** (only #26-scale cut, not #28) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
 | V9 | `#25` node/addr working-set pooling | G=16 → **1319** (+163) to free 256w; genuinely live across the 32-vector cross-vector pipeline | never (structural pipeline depth) |
 | V10 | `#25` mtmp-group reduction for scratch | G=2 frees 73w for **+14c** (1170), G=1 frees 97w for **+19c** (1175); neither reaches the 128w d4 gate cleanly | never (regresses; use d4 table only if a free ≥79w reclaim appears) |
 
@@ -125,6 +125,14 @@ Probe: W0 `#20` branch `RESULT.md` §D4_FREE; `experiments/kill_test_d5.py`.
 - **STILL GATED on #25** (scratch 49<128 free). Probe-only; default build unchanged.
   Doc: `directions/26-d4-gather-cut-PROBE.md`.
 
+**#26 → NO-GO (2026-07-05, `explore/26-d4-gather-cut` f8dce88):** gate #25 proven
+**unreachable**. d4 table = **128w irreducible** (16 per-lane broadcasts). Clean
+reclaim ceiling **≈14w vs 79 needed**, verified 4 ways: (1) only 14w fully-dead setup;
+(2) all 31 vaddr live; (3) `v0_addr`/`v0_node` lifetimes **overlap** (same bundles) →
+alias reclaim 0; (4) overlay ceiling 49+72(d3)=**121<128** and d3/d4 adjacent-live.
+`mtmp` 3→2 regresses (+14c). Doc: `directions/26-d4-gather-cut-NOGO.md`.
+**Resurrection:** a per-vector footprint cut freeing ≥65 clean words w/o alu ops (none known).
+
 ---
 
 ## 5. KerSor / external tooling
@@ -138,8 +146,8 @@ Probe: W0 `#20` branch `RESULT.md` §D4_FREE; `experiments/kill_test_d5.py`.
 
 ## 6. What remains open (Wave-3, ranked)
 
-1. **#25 scratch-reclaim** — free ≥80 clean words without alu regression (enables d4 table).
-2. **#26 d4-gather-cut** — replace 512 d4 scalar gathers using d4 table **after** scratch solved; target D4_FREE band ~1088.
+1. **#25 scratch-reclaim** — free ≥80 clean words without alu regression (enables d4 table). **Clean ceiling proven ≈14w (§4 #26 NO-GO); needs a per-vector footprint cut, none known.**
+2. **#26 d4-gather-cut** — **NO-GO** (gate #25 unreachable). Prize real (63c) but parked until a ≥65w clean reclaim appears. Doc: `26-d4-gather-cut-NOGO.md`.
 3. **#27 alu-repack-post-load** — *precondition-parked* (V8): on 1156 alu is sub-floor, repack absorbed (NO-GO). **Validated & banked** on D4_FREE: pulls alu 1036.7 → **F 975.5**. Runs only **after #26** as the mandatory re-tune pass.
 
 **Do not start #26 before #25 kill-test passes** (scratch_ptr ≤ 1408).
@@ -171,6 +179,7 @@ PSPACE=0 python tests/submission_tests.py   # must not regress 1190
 | `explore/24-tailgap-setup-pipe` | 0d3cc56 | `directions/FINDING-24.md`, `analyze_gap.py` |
 | `explore/19a-2round-fuse` | 1f748dc | `directions/19a-2round-fuse-NOGO.md` |
 | `explore/27-alu-repack-post-load` | (this) | `directions/27-alu-repack-post-load-NOGO.md`, `experiments/probe_27_repack.py` |
+| `explore/26-d4-gather-cut` | f8dce88 | `directions/26-d4-gather-cut-NOGO.md`, `26-d4-gather-cut-PROBE.md`, `experiments/probe_d4_free.py` |
 
 Cherry-pick NO-GO docs to `merged-floor` when convenient; **LESSONS.md** is the
 single entry point.

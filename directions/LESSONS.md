@@ -102,8 +102,17 @@ on D4_FREE graph, not "never").
 |---|---|---|---|
 | **A1** | `#28` const→flow (`add_imm` on flow, not `const` on load) | **1156→1152** | first 12 setup consts → flow; N>12 serializes (1-slot flow + zero-seed RAW chain); env `CONST_FLOW_N`, default 12 |
 
-**A1 headroom:** 11 setup consts still on load but in less-saturated cycles;
-moving more regressed in the sweep. Re-anneal (Rule C) may repack the −4 further.
+**A1 headroom:** the 47 const-loads still on load are **NOT** in less-saturated
+cycles — probe `experiments/probe_const_placement.py` shows **46/47 land in
+load=2/2 bundles** (16 setup pairs, 31 windup vaddr+vload). But the 31 windup
+ones are the per-vector `vaddr` (§2b A2 NO-GO) and the 16 setup ones are
+zero-seed-chained (#28 N>12 kill). Re-anneal (Rule C) may still repack the −4.
+
+### 2b NO-GO — engine rebalance that regressed
+
+| ID | Direction | Measured | Why dead |
+|---|---|---|---|
+| **A2** | `#29` per-vector `vaddr`→flow (`add_imm(va, IVP, j·V)` on idle windup flow) | sweep N=2→1159, 4→1168, 12→1161, 31→1170; **all N>0 regress**, N=0=1152 | each `vaddr` is a **direct RAW producer of its own vload** — moving it to the 1-slot flow engine puts an add_imm on the vload's critical path and serializes the windup. Unlike #28's setup consts (no load consumes them), these ARE on the load critical path. Flow being idle in the band is irrelevant. Probe: `experiments/probe_const_placement.py`. **Resurrection:** never for vaddr (structural: producer-of-load); only revisit if a future edit makes the vaddr non-critical. |
 
 ---
 

@@ -373,6 +373,7 @@ class KernelBuilder:
         self.scratch = {}
         self.scratch_debug = {}
         self.scratch_ptr = 0
+        self._free_scratch = []   # dir #25 recycler: (addr, length) dead-setup blocks
         self.const_map = {}
         self.ops = []
         self._next_id = 0
@@ -434,6 +435,19 @@ class KernelBuilder:
         return DebugInfo(scratch_map=self.scratch_debug)
 
     def alloc_scratch(self, name=None, length=1):
+        # Reuse a freed block of the exact size first (dir #25 recycler): setup
+        # emits its own instruction stream that fully completes before the loop
+        # body runs, so scratch written only during setup can be handed back to
+        # the allocator and reused by the per-vector body vecs -- dropping the
+        # high-water mark with zero op changes.
+        for i, (faddr, flen) in enumerate(self._free_scratch):
+            if flen == length:
+                del self._free_scratch[i]
+                addr = faddr
+                if name is not None:
+                    self.scratch[name] = addr
+                    self.scratch_debug[addr] = (name, length)
+                return addr
         addr = self.scratch_ptr
         if name is not None:
             self.scratch[name] = addr
@@ -441,6 +455,12 @@ class KernelBuilder:
         self.scratch_ptr += length
         assert self.scratch_ptr <= SCRATCH_SIZE, "Out of scratch space"
         return addr
+
+    def free_scratch(self, addr, length):
+        """Return a scratch block to the recycler (dir #25). Only safe for
+        addresses that are dead once the loop body starts -- i.e. written/read
+        only within setup, which is a separate scheduled instruction stream."""
+        self._free_scratch.append((addr, length))
 
     def vec(self, name):
         return self.alloc_scratch(name, V)
@@ -941,9 +961,9 @@ class KernelBuilder:
         # K5-deferral: depth-2 rounds are always enter_x -> bake K5 in place.
         for k in range(3, 7):
             self.v_alu("^", c[f"nb{k}"], c[f"nb{k}"], c["K5"])
-        # shared temp for the 4-way mux (written+read within one mux, so the
-        # scheduler serializes it across vectors only within depth-2 rounds).
-        c["mtmp"] = self.vec("mtmp")
+        # (The depth-2 4-way mux uses the mtmp_{g} group temps allocated below;
+        # the old standalone `mtmp` vec was orphaned by the mtmp_0 alias at the
+        # end of setup, so it is not allocated here.)
 
         # tree[7..14] broadcasts for depth-3 rounds (idx in {7..14}): an 8-way
         # vselect tournament replaces 8 gathers, cutting 512 load slots. We
@@ -1006,6 +1026,24 @@ class KernelBuilder:
         c["mtmp3"] = c["mtmp3_0"]
 
         self.emit()  # setup bundles
+
+        # dir #25 scratch recycle: tree_lo and d3_tree_vec are vload scratch
+        # read only by the setup broadcasts (nb*/d3_*); they are dead once the
+        # body stream begins. Hand them back so the per-vector body vecs reuse
+        # them, dropping the high-water mark with zero op changes.
+        self.free_scratch(tree_lo, V)
+        self.free_scratch(d3_tree_vec, V)
+        # fvp_p8 is the scalar base for the d3_tree_vec vload; dead in the body.
+        self.free_scratch(fvp_plus_8, 1)
+        # For a single group the loop-control scalars (vctr/vstride/grp_base/
+        # grp_base_v/cond) are never touched by the body -- the base is just the
+        # header pointers (see the n_groups==1 branch below). Recycle them.
+        if n_groups == 1:
+            self.free_scratch(vctr, 1)
+            self.free_scratch(vstride, 1)
+            self.free_scratch(grp_base, 1)
+            self.free_scratch(grp_base_v, 1)
+            self.free_scratch(cond, 1)
 
         # ---- per-vector scratch ----
         # node and addr double as hash temps (t1/t2) and traverse temps

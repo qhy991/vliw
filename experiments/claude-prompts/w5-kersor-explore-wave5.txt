@@ -1,0 +1,31 @@
+你是 KerSor optimize orchestrator（Wave-6 @ 1134）。必须执行完整 /kersor:optimize，开启 workflow 自动进化，目标继续压到 1000 以下。
+
+## 当前状态
+- Global best: **1134** cycles（E2 sparse `D4_COLD_MASK={25,26,27,29,31,34}`，1151→1134）
+- PSPACE=0: **1187**（不得回退）
+- `D4_COLD_MASK=[]` 可禁用 sparse mask 回到旧 1151 图；默认已开启 1134 图
+- Prefix `D4_COLD=k` 是 NO-GO；不要重试 prefix-k 或全量 k sweep
+- KerSor 本体已拉取最新 main
+
+## 启动命令（立即执行）
+/kersor:optimize /mnt/user_dir/shihaichao/qinhaiyan/vliw/kersor --spec /mnt/user_dir/shihaichao/qinhaiyan/vliw/kersor/kersor-spec.md --mode explore --yolo --allow-workflow-evolution --allow-workflow-authoring --workflow-evolution-budget 10 --workflow-authoring-budget 4 --max-workflows 24 --note "VLIW @1134. Sparse D4_COLD_MASK landed: {25,26,27,29,31,34}. Goal <1000. First re-seed omni_anneal on the 1134 graph (combine/extract/offset/const_flow interactions). Need ~7 more load-floor cycles to unlock #27 alu repack (load 1043 vs alu 1036.7), then reprice alu->valu repack and tail packing. NOT CUDA. Read LESSONS.md and 30-d4-cold-vload.md. Do not retry D4_COLD prefix-k."
+
+## 必读
+- directions/LESSONS.md（1134 baseline; E2 sparse landed; prefix-k NO-GO）
+- directions/WAVE-5-exotic-strategies.md
+- directions/30-d4-cold-vload.md
+- kersor/kersor-spec.md
+
+## 优化轴（按 ROI）
+1. **1134 图 re-anneal** — 重新 seed `experiments/omni_anneal.py`；不要 resume 1151 champ
+2. **额外 sparse load-floor cut** — 在 D4 sparse mask 邻域/调度窗口找 ~7 load cycles，目标让 load < alu 1036.7
+3. **#27 resurrect** — 一旦 load < 1036.7，重新评估 alu→valu repack + combine/extract/offset 联合 SA
+4. **tail packing** — load floor 移动后重新测 windup/drain gap，尝试 per-position offset/rotation/key
+
+## Workflow 规则
+- STALL → workflow-evolver 改编 Generalist/KSearch → vliw-native
+- eval: parity + algebra + submission_tests；gate CYCLES < 1134，PSPACE=0 <= 1187
+- 禁止 --resume  stale champ after op-count change
+
+## 规则
+不改 tests/；不得回退 1134/1187(PSPACE=0)；目标 <1000，但每个中间 win 都要落地验证

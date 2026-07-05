@@ -1,6 +1,6 @@
-# LESSONS — do-not-repeat registry @ 1151 (2026-07-05)
+# LESSONS — do-not-repeat registry @ 1134 (2026-07-05)
 
-**Global best:** `explore/merged-floor` @ **1151** cycles (128.35×), PSPACE=1 (PSPACE=0 1187).
+**Global best:** `explore/merged-floor` @ **1134** cycles (130.28×), PSPACE=1 (PSPACE=0 1187).
 
 This file records **verified kills** so future sessions (human, Claude, KerSor)
 do not re-burn worktrees. Every entry has a reproducible probe or committed
@@ -102,6 +102,7 @@ on D4_FREE graph, not "never").
 |---|---|---|---|
 | **A1** | `#28` const→flow (`add_imm` on flow, not `const` on load) | **1156→1152** | first 12 setup consts → flow; N>12 serializes (1-slot flow + zero-seed RAW chain); env `CONST_FLOW_N`, default 12 |
 | **A1b** | `#30` per-instance const→flow **mask** (SA-repacked *which* consts route to flow) | **1152→1151** | KerSor variant-r1 beam solver found it; 11 consts (not first-12) via `_const_flow_mask`; realizes the A1 headroom; PSPACE=0 1189→1187; env `CONST_FLOW_MASK` |
+| **E2s** | sparse `D4_COLD_MASK` over d4 emit order | **1151→1134** | cold vload mux is too expensive as prefix-k, but a six-instance sparse mask `{25,26,27,29,31,34}` lands in a schedule window; env `D4_COLD_MASK=[]` disables |
 
 **A1 headroom:** the 47 const-loads still on load are **NOT** in less-saturated
 cycles — probe `experiments/probe_const_placement.py` shows **46/47 land in
@@ -176,6 +177,16 @@ loads only; the real mux adds 8 valu + 7 flow ops/instance competing for the
 pooled registers. **Resurrection:** a table cheaper than 16 per-lane broadcasts,
 OR scratch from a non-hot-path source (neither known). Doc: `round-4.md`.
 
+**E2 D4_COLD prefix-k → NO-GO, sparse mask → WIN (2026-07-05):** env
+`D4_COLD=k` — vload tree[15..30] once (16w) + b0 layer-wise vbroadcast into
+bc0/bc1 (40w total scratch, **no pooling**, parity ALL-PASS). Prefix-k is dead:
+k=1 **1171** (+20), k=14 **1230** (+79), k=64 **1921**. Root cause is
+runtime b0 vbroadcast+flow tax. But `D4_COLD_MASK` over emit order found a
+schedule-local window; shipped default `{25,26,27,29,31,34}` gives **1134** with
+load **1043**, valu **1025**, flow **805**, PSPACE=0 unchanged **1187**. Seven/eight
+wide masks regress; local swaps found no better than 1135. Doc:
+`directions/30-d4-cold-vload.md`; probe: `experiments/probe_e2_d4_coldmask.py`.
+
 ---
 
 ## 5. KerSor / external tooling
@@ -191,13 +202,14 @@ OR scratch from a non-hot-path source (neither known). Doc: `round-4.md`.
 
 1. **#25 scratch-reclaim** — LANDED at **78 free** (recycler cherry-picked, ebcbf00). Clean ceiling exhausted; reaching 128 needs node/addr pooling which regresses (see #26 real NO-GO).
 2. **#26 d4-gather-cut** — **NO-GO by real implementation** (round-4: best 1251, +99). Prize real (load floor 810) but pooling penalty (+69c@G=24) exceeds gather-cut prize (−44c). Full bit-exact mux in stash. Doc: `round-4.md`.
-3. **#27 alu-repack-post-load** — *precondition never met*: #26 is NO-GO, so the load floor never drops below alu 1036.7. Parked indefinitely (depended on #26).
+2b. **E2 D4_COLD sparse mask** — LANDED **1134**. Prefix-k is still NO-GO; do not retry prefix. Further work should re-anneal combine/extract/offset on the 1134 graph and explore sparse-mask neighborhoods only if coupled with a scheduler objective.
+3. **#27 alu-repack-post-load** — precondition is now closer but not met: sparse D4 load floor **1043** is still above alu **1036.7**. Revisit only after another ~7 load-floor cycles.
 
-**#26 is NO-GO — not gated, measured.** No known lever moves the load floor at 1152.
+**#26 is NO-GO — not gated, measured.** E2 sparse moved the load floor, but the
+128w resident table path remains dead.
 
-Sub-1000 path: load floor 814 (D4_FREE) + alu repack + tail gap after floor drop
-≈ 1088 − 70 tail → ~1018; need additional load cuts (d5+) or alu structural wins
-for <1000.
+Sub-1000 path: sparse D4 is only the first real load-floor move. Need another
+~7 cycles load reduction to unlock #27 alu repack, then re-anneal tail packing.
 
 ---
 
@@ -205,8 +217,8 @@ for <1000.
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py            # must OK, CYCLES <= 1156 to land
-PSPACE=0 python tests/submission_tests.py   # must not regress 1190
+python tests/submission_tests.py            # must OK, CYCLES <= 1134 to land
+PSPACE=0 python tests/submission_tests.py   # must not regress 1187
 ```
 
 ---

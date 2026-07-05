@@ -8,16 +8,17 @@
 
 - op: VLIW instruction scheduler (`KernelBuilder.build_kernel`)
 - backend: python (combinatorial / no GPU)
-- target_speedup: 1.282  (1152 → 1000 cycles; absolute baseline 147734 cycles)
+- target_speedup: 1.134  (1134 → 1000 cycles; absolute baseline 147734 cycles)
 - status: VERIFIED
 
 ## Constraints
 
 - Do NOT modify `tests/` or `problem.py`
-- Global best gate: `CYCLES <= 1152` (PSPACE=1), PSPACE=0 must stay <= 1189
+- Global best gate: `CYCLES <= 1134` (PSPACE=1), PSPACE=0 must stay <= 1187
 - Read `directions/LESSONS.md` before any experiment — do not retry listed NO-GO levers
-- Active Wave-4: scratch-free load cuts (A2–A5) → partial d4 (B1–B3) → #27 repack if load<1036.7
-- KerSor: enable `--allow-workflow-evolution --allow-workflow-authoring`; evolve VLIW-native workflow on STALL
+- Landed: #28 const→flow (1156→1152), #30 const_flow_mask (1152→1151), E2 sparse D4_COLD_MASK (1151→1134)
+- Active Wave-6: re-anneal 1134 graph > find ~7 more load-floor cycles > resurrect #27 alu repack > tail packing
+- KerSor: `--allow-workflow-evolution --allow-workflow-authoring`; use VLIW-native workflows, NOT CUDA
 
 ---
 
@@ -27,22 +28,22 @@
 op=VLIW-perf_takehome-scheduler
 backend=python
 kernel_language=python
-target_speedup=1.282
+target_speedup=1.134
 seed_origin=provided_kernel
 kernel_path=/mnt/user_dir/shihaichao/qinhaiyan/vliw/perf_takehome.py
 integration_pattern=standalone
-timing_method=submission_tests
+timing_method=e2e
 metric_contract=cycles
 forbid_pytest_wall_as_headline=false
-baseline_id=merged-floor-1152
-baseline_ms=1152
+baseline_id=merged-floor-1134
+baseline_ms=1134
 min_runs=3
 require_ci=false
 status=VERIFIED
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:test-method.md===
-# Test Method — VLIW perf_takehome @ 1152
+# Test Method — VLIW perf_takehome @ 1134
 
 ## Environment
 - Conda env: `vllm`
@@ -61,13 +62,14 @@ python parity_check.py && python algebra_check_ported.py
 ```bash
 python tests/submission_tests.py
 ```
-- Pass: prints `OK`, `CYCLES: N` where N <= current best (1152)
-- Also run: `PSPACE=0 python tests/submission_tests.py` (must not regress 1189)
+- Pass: prints `OK`, `CYCLES: N` where N <= current best (1134)
+- Also run: `PSPACE=0 python tests/submission_tests.py` (must not regress 1187)
 
 ## Baseline
-- Baseline Latency (ms): 1152
-- Baseline: merged-floor @ 1152 cycles (128.24× over 147734 reference)
-- Timing Method: submission_tests
+- Baseline Latency (ms): 1134
+- Baseline: merged-floor-1134
+- Baseline Detail: merged-floor @ 1134 cycles (130.28× over 147734 reference)
+- Timing Method: e2e
 - Baseline Status: present
 
 ## Local optimization tools (USE THESE — not CUDA workflows)
@@ -80,12 +82,18 @@ python tests/submission_tests.py
 | `experiments/analyze_gap.py` | Tail gap measurement |
 | `directions/LESSONS.md` | Do-not-repeat registry |
 
+## User guidance (KerSor orchestrator)
+- Baseline 1134 (sparse D4_COLD_MASK). Beat 1134; PSPACE=0 <= 1187.
+- NOT CUDA: evolve VLIW-native workflow on STALL.
+- Priority: (1) re-seed omni_anneal on 1134 graph; (2) find ~7 more load-floor cycles to unlock #27; (3) reprice alu→valu repack + tail packing.
+- Read: directions/WAVE-5-exotic-strategies.md, directions/LESSONS.md
+
 ## Confirmation Needed
 - None
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:kernel-profile.md===
-# Kernel Profile — VLIW @ 1152
+# Kernel Profile — VLIW @ 1134
 
 - Operation Type: VLIW list-scheduler kernel (Python emitter + greedy scheduler)
 - Language: python
@@ -96,44 +104,41 @@ python tests/submission_tests.py
 ## Shape
 - forest_height=10, rounds=16, batch_size=256, VLEN=8, K_VEC=32
 
-## Engine profile @ 1152 (PSPACE=1)
+## Engine profile @ 1134 (PSPACE=1)
 ```
-load  2129  floor 1064.5  <- BINDING
-alu  12440  floor 1036.7  (28 slots below load — #27 repack absorbed until load drops)
-valu  6017  floor 1002.8
-flow    716  floor  716.0
-realized 1152 | tail gap ~88
+load  ~2086  floor 1043.0  <- BINDING
+alu   12440  floor 1036.7
+valu  ~6150  floor 1025.0
+flow    805  floor  805.0
+realized 1134 | tail gap ~91
 ```
 
-## D4_FREE probe (partial prize, #26 NO-GO full table)
-- k=64: **1093**; crossover k≈12–14; partial k∈[14,22] → ~1100–1110 if mux fits in 79w scratch
-- Full 128w d4 table blocked; cherry-pick #25 recycler → 79 free @1152
+## Landed @ 1134
+- #28 const→flow N=12: 1156→1152
+- #30 const_flow_mask: 1152→1151 (per-instance SA mask over 58 consts)
+- E2 sparse D4_COLD_MASK `{25,26,27,29,31,34}`: 1151→1134
 
-## Binding rule
-- Rule E (#28): engine-of-op matters — const on load vs add_imm on flow
-- Do NOT retry: LESSONS §2–§4 kill registry
-
-## Active levers (Wave-4)
-1. A2–A5 scratch-free load cuts (#28 extension, setup reorder)
-2. B1 cherry-pick #25 recycler; B2 partial D4_FREE k-sweep
-3. #27 alu repack ONLY after load floor < 1036.7
+## Active levers (Wave-6)
+1. Re-seed `experiments/omni_anneal.py` on 1134 graph (combine/extract/offset/const_flow)
+2. Sparse load-floor search: need ~7 more load cycles to cross below alu 1036.7
+3. If load < alu, resurrect #27 alu→valu repack and tail packing
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:roofline-target.json===
 {
   "grounded": true,
-  "baseline_cycles": 1152,
+  "baseline_cycles": 1134,
   "target_cycles": 1000,
-  "realistic_speedup": 1.152,
+  "realistic_speedup": 1.134,
   "ceiling_cycles": 814,
-  "ceiling_note": "D4_FREE k=64; partial k~14-22 ~1100; #27 after load<1036.7",
+  "ceiling_note": "D4_FREE k=64; sparse D4 landed 1134; #27 after load<1036.7",
   "binding_engine": "load"
 }
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:baseline-measurement.json===
 {
-  "baseline_ms": 1152,
+  "baseline_ms": 1134,
   "metric": "cycles",
   "source": "submission_tests",
   "verified_at": "2026-07-05",

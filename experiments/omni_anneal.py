@@ -123,6 +123,17 @@ CLASSES = {
         probe=lambda kb: 1,
         seed=lambda kb: int(kb._d3_gather_tail),
         lo=0, hi=8),
+    # const->flow rerouting (dir #30): each True flips a distinct non-zero const
+    # from the binding load engine to add_imm on the idle flow engine. Sheds one
+    # op off the load floor per flip. Co-searched with combine/extract/offset so
+    # SA can reorder emit (offset) around the 1-slot flow serialization the
+    # isolated #28/#30 tune could not. flip_bias 0.5 (neutral): False->True sheds
+    # a load-engine op, True->False returns one -- let SA balance jointly.
+    "const_flow": ClassSpec(
+        attr="_const_flow_mask", kind="mask",
+        probe=lambda kb: kb._const_flow_idx,
+        seed=lambda kb: list(kb._const_flow_mask),
+        flip_bias=0.5),
 }
 
 
@@ -150,6 +161,19 @@ def build(genome, rot=ORACLE_ROT, full=False):
 
 def ev(genome):
     return len(build(genome).instrs)
+
+
+def ev_joint(genome, rot=ORACLE_ROT):
+    """#31 joint-floor score: (realized, joint) on the oracle rotation. joint =
+    max(load,alu)+realized so SA is rewarded for closing the load-alu gap even
+    before realized moves (a candidate that drops the binding engine's floor
+    toward the other scores better at equal realized). Returns (realized, joint,
+    load, alu)."""
+    kb = build(genome, rot=rot)
+    fl = floors(kb)
+    realized = fl["realized"]
+    joint = max(fl["load"], fl["alu"]) + realized
+    return realized, joint, fl["load"], fl["alu"]
 
 
 def ev_full(genome):
@@ -220,12 +244,27 @@ def _boundary_weights(n, head_frac=0.15, tail_frac=0.15, boost=4.0):
 
 
 class Proposer:
-    def __init__(self, active, sizes, rng):
+    def __init__(self, active, sizes, rng, joint=False):
         self.active, self.sizes, self.rng = active, sizes, rng
+        self.joint = joint
         self.wts = {n: _boundary_weights(sizes[n])
                     for n in active if CLASSES[n].kind == "mask"}
         # propose a class in proportion to its gene size (bigger -> more moves)
         self.pick_wts = [max(1, sizes[n]) for n in active]
+        # #31 joint-floor: the alu-shed partner classes present in the genome.
+        self._alu_shed = [n for n in ("combine", "extract") if n in active]
+
+    def _flip_mask_bit(self, mask, name, to_alu=None):
+        """Flip one boundary-weighted bit of `mask`; if to_alu given, prefer an
+        index currently on that source engine so the flip achieves the intent."""
+        if to_alu is None:
+            to_alu = self.rng.random() < CLASSES[name].flip_bias
+        cands = [i for i, b in enumerate(mask) if b == to_alu]
+        if not cands:
+            cands = list(range(len(mask)))
+        w = [self.wts[name][i] for i in cands]
+        i = self.rng.choices(cands, weights=w, k=1)[0]
+        mask[i] = not mask[i]
 
     def _pick_index(self, name, want=None):
         """Boundary-weighted index; if want in {True,False} restrict to indices
@@ -237,19 +276,24 @@ class Proposer:
 
     def mutate(self, genome):
         g = {k: (list(v) if isinstance(v, list) else v) for k, v in genome.items()}
+        # #31 joint-floor paired flip: with prob 0.5, if const_flow (load-shed)
+        # and a combine/extract (alu-shed) class are both active, propose one flip
+        # on each in the SAME step so the walk reaches (load,alu) joint states the
+        # one-class-at-a-time mutate cannot. False->True on const_flow sheds a
+        # load-floor op; True->False on the alu-shed class returns an alu op to
+        # valu (which has ~62 free slots). Arithmetic-identical either way.
+        if (self.joint and "const_flow" in self.active and self._alu_shed
+                and self.rng.random() < 0.5):
+            self._flip_mask_bit(g["const_flow"], "const_flow", to_alu=False)
+            an = self.rng.choice(self._alu_shed)
+            self._flip_mask_bit(g[an], an, to_alu=True)
+            return g
         name = self.rng.choices(self.active, weights=self.pick_wts, k=1)[0]
         spec = CLASSES[name]
         if spec.kind == "mask":
             mask = g[name]
             for _ in range(self.rng.randint(1, 4)):
-                to_alu = self.rng.random() < spec.flip_bias  # True->False
-                # prefer an index currently on the source engine, near boundary
-                cands = [i for i, b in enumerate(mask) if b == to_alu]
-                if not cands:
-                    cands = list(range(len(mask)))
-                w = [self.wts[name][i] for i in cands]
-                i = self.rng.choices(cands, weights=w, k=1)[0]
-                mask[i] = not mask[i]
+                self._flip_mask_bit(mask, name)
         elif spec.kind == "offset":
             off = g[name]
             for _ in range(self.rng.randint(1, 2)):
@@ -291,9 +335,15 @@ def load_champ(path):
 # --------------------------------------------------------------------------- #
 # SA driver
 # --------------------------------------------------------------------------- #
-def anneal(active, iters, out, seed, confirm_every, T0, cooling, resume):
+def anneal(active, iters, out, seed, confirm_every, T0, cooling, resume,
+           joint=False):
     rng = random.Random(seed)
     genome, sizes = build_seed(active)
+    if joint:
+        if "const_flow" not in active or not any(
+                n in active for n in ("combine", "extract")):
+            raise SystemExit("--joint-floor requires const_flow AND one of "
+                             "combine/extract in --classes")
     if resume and os.path.exists(out):
         d = load_champ(out)
         for name in active:
@@ -303,14 +353,20 @@ def anneal(active, iters, out, seed, confirm_every, T0, cooling, resume):
                     genome[name] = (list(val) if isinstance(val, list) else val)
         print(f"resumed genome from {out} (sizes checked)", flush=True)
 
-    prop = Proposer(active, sizes, rng)
-    cur = ev(genome)
+    prop = Proposer(active, sizes, rng, joint=joint)
+    if joint:
+        cur_r, cur_j, _, _ = ev_joint(genome)
+        cur = cur_r
+        cur_score = cur_j
+    else:
+        cur = ev(genome)
+        cur_score = cur
     best_oracle = cur
     best_genome = {k: (list(v) if isinstance(v, list) else v)
                    for k, v in genome.items()}
     seed_full = ev_full(genome)
     best_full = seed_full
-    print(f"active={active} sizes={sizes}", flush=True)
+    print(f"active={active} sizes={sizes} joint={joint}", flush=True)
     print(f"seed: rot{ORACLE_ROT}={cur} FULL32={seed_full}", flush=True)
     fl0 = floors(build(genome, full=True))
     print(f"seed floors: v={fl0['valu']:.1f} a={fl0['alu']:.1f} "
@@ -320,10 +376,16 @@ def anneal(active, iters, out, seed, confirm_every, T0, cooling, resume):
     T, t0, accepts = T0, time.time(), 0
     for it in range(iters):
         ng = prop.mutate(genome)
-        c = ev(ng)
-        d = c - cur
+        if joint:
+            c, c_score, c_load, c_alu = ev_joint(ng)
+        else:
+            c = ev(ng)
+            c_score = c
+        # #31: SA acceptance is over the joint score (gap-closing reward) when
+        # --joint-floor is set, but best-tracking + ship gate stay on realized.
+        d = c_score - cur_score
         if d <= 0 or rng.random() < math.exp(-d / max(T, 1e-6)):
-            genome, cur = ng, c
+            genome, cur, cur_score = ng, c, c_score
             accepts += 1
             if c < best_oracle:
                 best_oracle = c
@@ -374,6 +436,10 @@ def main():
                     help="warm-start genome from --out if class sizes match")
     ap.add_argument("--seed-only", action="store_true",
                     help="print seed metrics + correctness and exit (smoke test)")
+    ap.add_argument("--joint-floor", action="store_true",
+                    help="#31: score/accept on the joint load+alu objective and "
+                         "propose paired const_flow(load-shed)+combine/extract"
+                         "(alu-shed) flips; requires those classes in --classes")
     args = ap.parse_args()
 
     active = [c.strip() for c in args.classes.split(",") if c.strip()]
@@ -394,7 +460,7 @@ def main():
         return
 
     anneal(active, args.iters, args.out, args.seed, args.confirm_every,
-           args.T0, args.cooling, args.resume)
+           args.T0, args.cooling, args.resume, joint=args.joint_floor)
 
 
 if __name__ == "__main__":

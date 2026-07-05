@@ -158,6 +158,23 @@ verified on #28 (1152, 79 free). Still <128 (48w short, only node/addr pooling
 left, which regresses), so **the NO-GO verdict is unchanged** — 30w < 65w
 resurrection bar. But the recycler is worth cherry-picking (79 free ≫ 49).
 
+**#26 → NO-GO by REAL implementation (2026-07-05, round-4, merged-floor):**
+recycler LANDED (ebcbf00, 78 free) + a full **bit-exact** d4 mux built and
+measured (stash: "wip: #26 d4-mux real impl"). 16-way tournament over nb15..nb30,
+valu-muladd leaves + flow upper selects, node/addr pooling to fund the table.
+`submission_tests` + `algebra_check` ALL-PASS at D4_MUX=64 → **the mux is
+correct**. But exhaustive (LEAF×k×G, 70 configs) **best = 1251 (+99)**. Root
+cause, measured on this graph:
+- d4 mux drops load floor **1064.5→810.5** (prize real, ~−44c at k=32 per D4_FREE).
+- 128w table (irreducible) + temps need node/addr pooling to fit (78 free).
+- **pooling penalty (measured, D4_MUX=0): G=28 +47c, G=24 +69c, G=20 +101c** —
+  node/addr are hash temps, so pooling serializes the hot path.
+- table needs G≤24 to fit → penalty (+69c) **exceeds** prize (−44c) at every point.
+The `probe_node_addr_pool.py` "+10c on d4-cut graph" was optimistic: it deleted
+loads only; the real mux adds 8 valu + 7 flow ops/instance competing for the
+pooled registers. **Resurrection:** a table cheaper than 16 per-lane broadcasts,
+OR scratch from a non-hot-path source (neither known). Doc: `round-4.md`.
+
 ---
 
 ## 5. KerSor / external tooling
@@ -171,11 +188,11 @@ resurrection bar. But the recycler is worth cherry-picking (79 free ≫ 49).
 
 ## 6. What remains open (Wave-3, ranked)
 
-1. **#25 scratch-reclaim** — free ≥80 clean words without alu regression (enables d4 table). **Clean ceiling proven ≈14w (§4 #26 NO-GO); needs a per-vector footprint cut, none known.**
-2. **#26 d4-gather-cut** — **NO-GO** (gate #25 unreachable). Prize real (63c) but parked until a ≥65w clean reclaim appears. Doc: `26-d4-gather-cut-NOGO.md`.
-3. **#27 alu-repack-post-load** — *precondition-parked* (V8): on 1156 alu is sub-floor, repack absorbed (NO-GO). **Validated & banked** on D4_FREE: pulls alu 1036.7 → **F 975.5**. Runs only **after #26** as the mandatory re-tune pass.
+1. **#25 scratch-reclaim** — LANDED at **78 free** (recycler cherry-picked, ebcbf00). Clean ceiling exhausted; reaching 128 needs node/addr pooling which regresses (see #26 real NO-GO).
+2. **#26 d4-gather-cut** — **NO-GO by real implementation** (round-4: best 1251, +99). Prize real (load floor 810) but pooling penalty (+69c@G=24) exceeds gather-cut prize (−44c). Full bit-exact mux in stash. Doc: `round-4.md`.
+3. **#27 alu-repack-post-load** — *precondition never met*: #26 is NO-GO, so the load floor never drops below alu 1036.7. Parked indefinitely (depended on #26).
 
-**Do not start #26 before #25 kill-test passes** (scratch_ptr ≤ 1408).
+**#26 is NO-GO — not gated, measured.** No known lever moves the load floor at 1152.
 
 Sub-1000 path: load floor 814 (D4_FREE) + alu repack + tail gap after floor drop
 ≈ 1088 − 70 tail → ~1018; need additional load cuts (d5+) or alu structural wins

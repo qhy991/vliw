@@ -72,7 +72,7 @@ materially below 2140), then re-run omni-anneal + #24 levers.
 | V5 | `#03` phase-2 rem-ring | needs **+256–768** scratch; 49 free | after ≥200 scratch reclaimed |
 | V6 | `#13` mem spill | load floor blocks | same as V5 |
 | V7 | More valu deletion while load=1070 | any −N valu with N<67 floor-slots | load floor drops first |
-| V8 | `#27` alu→valu repack @ 1156/1152 | alu(1036.7) **sub-floor** vs load(1070→1064.5 after #28); perfect repack x≈41 → alu=valu≈1009 but binding stays **load**, realized unchanged; omni-anneal combine+extract+offset 4k iters found 0 improving moves. **Re-priced @1152 (#28): still NO-GO** (load 1064.5 still >alu 1036.7, ~28c gap) | load floor drops **below alu 1036.7** (only #26-scale cut, not #28) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
+| V8 | `#27` alu→valu repack @ 1156/1152 | alu(1036.7) **sub-floor** vs load(1070→1064.5 after #28); perfect repack x≈41 → alu=valu≈1009 but binding stays **load**, realized unchanged; omni-anneal combine+extract+offset 4k iters found 0 improving moves. **Re-priced @1152 (#28): still NO-GO** (load 1064.5 still >alu 1036.7, ~28c gap) | load floor drops **below alu 1036.7** via a **scratch-free** cut (#26 d4-table now NO-GO, gate unreachable; #28-class only, ~28c more needed) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
 | V9 | `#25` node/addr working-set pooling | G=16 → **1319** (+163) to free 256w; genuinely live across the 32-vector cross-vector pipeline | never (structural pipeline depth) |
 | V10 | `#25` mtmp-group reduction for scratch | G=2 frees 73w for **+14c** (1170), G=1 frees 97w for **+19c** (1175); neither reaches the 128w d4 gate cleanly | never (regresses; use d4 table only if a free ≥79w reclaim appears) |
 
@@ -80,9 +80,19 @@ Probe: `experiments/killtest_23.py` (V2), `experiments/probe_27_repack.py` (V8),
 round-1 scratch-audit (`experiments/.kersor-vliw/round-2.md`, V9/V10), `#22`/`#27`
 NO-GO repro blocks.
 
-**#25 gate verdict:** no clean ≥79-word reclaim exists (only 13 words genuinely
-dead, all reused). The scratch path to the d4 table (#26) is **structurally
-blocked** — pursue load-floor drops that need no scratch (see A1) instead.
+**#25 gate verdict:** the literal 128-word gate is unreachable cycle-neutrally
+(pooling regresses — V9/V10). **BUT a free-list recycler DID land 30 clean words
+cycle-neutrally** on `explore/25-scratch-reclaim-d4` (49→**80 free**, 1156
+unchanged, 4 gated commits; **stack-verified on #28 HEAD → 1152, 79 free**): the
+round-1 "only 13 dead" audit undercounted — it counted only *trailing*
+droppable words, but setup scratch (`tree_lo`/`d3_tree_vec` vloads, orphan
+`mtmp`, `fvp_p8`, single-group loop-control) is *reusable* by body vecs because
+setup is a separate scheduled stream. Recycler is **ready to cherry-pick**
+(commits b0804af 01bdf52 f6549e3 619601d → merged-floor gives 79 free at 1152).
+Still short of 128 → d4 table (#26) stays blocked; pursue no-scratch load-floor
+drops (A1). See `25-scratch-reclaim-d4-RESULT.md`,
+`experiments/probe_node_addr_pool.py` (refines V9: G=29/48w = +33 current / +10
+on D4_FREE graph, not "never").
 
 ---
 

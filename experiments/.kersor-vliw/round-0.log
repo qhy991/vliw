@@ -1,0 +1,36 @@
+=== KerSor VLIW round 0 lever=verify-only 2026-07-05T08:57:48+08:00 ===
+BEFORE=1156
+depth-1 parity node mismatches: 0 / 512
+depth-1 parity node mismatches: 0 / 512
+ALL-PASS: 0 mismatches across all configs. x-space carry is bit-exact.
+ALL-PASS: 0 mismatches across all configs. x-space carry is bit-exact.
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 10.995s
+
+OK
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Speedup over baseline:  127.79757785467127
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Testing forest_height=10, rounds=16, batch_size=256
+CYCLES:  1156
+Speedup over baseline:  127.79757785467127
+AFTER=1156 delta=0

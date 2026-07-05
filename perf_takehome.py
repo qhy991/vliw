@@ -376,6 +376,13 @@ class KernelBuilder:
         self.const_map = {}
         self.ops = []
         self._next_id = 0
+        # const->flow rebalance (#28): route the first N distinct non-zero setup
+        # consts to add_imm on the idle flow engine instead of const on the
+        # binding load engine. Default 12 (swept optimum); env CONST_FLOW_N override.
+        import os as _os_cf
+        self._const_flow_n = int(_os_cf.environ.get("CONST_FLOW_N", "12"))
+        self._const_flow_no = 0
+        self._zero_seed = None
         # Targeted alu->valu rebalance for the hash XOR-combines. Each of the
         # 3 combines per (vec, round) defaults to 8 ALU slots (v_alu_scalar);
         # switching to 1 valu slot (v_alu) moves it to the valu engine. The
@@ -456,9 +463,33 @@ class KernelBuilder:
 
     def scratch_const(self, val, name=None):
         if val not in self.const_map:
-            addr = self.alloc_scratch(name)
-            self.op("load", ("const", addr, val), writes=(addr,))
-            self.const_map[val] = addr
+            # Const-load runs on the *load* engine, which is the binding floor
+            # (2140/2 = 1070) after #15. The setup consts land in the load-
+            # saturated windup (cycles 0-47, L2) while the flow engine is idle
+            # there (F0). Routing the first _const_flow_n distinct non-zero
+            # consts to `add_imm(dest, zero_seed, val)` on flow (floor 704, huge
+            # slack) sheds them off the binding engine and relieves the windup.
+            # One shared zero-seed (a single real const load) sources them; a
+            # small N (~12) wins because beyond that the seed's RAW chain and the
+            # 1-slot flow engine serialize (swept: N=12 -> 1152, N>=16 regresses).
+            # add_imm is arithmetically exact (dest = scratch[zero]+val), so
+            # correctness is untouched. N=0 restores the all-load behavior.
+            if (self._const_flow_n > 0 and val != 0
+                    and self._const_flow_no < self._const_flow_n):
+                if self._zero_seed is None:
+                    self._zero_seed = self.alloc_scratch("zero_seed")
+                    self.op("load", ("const", self._zero_seed, 0),
+                            writes=(self._zero_seed,))
+                    self.const_map[0] = self._zero_seed
+                addr = self.alloc_scratch(name)
+                self.op("flow", ("add_imm", addr, self._zero_seed, val),
+                        reads=(self._zero_seed,), writes=(addr,))
+                self._const_flow_no += 1
+                self.const_map[val] = addr
+            else:
+                addr = self.alloc_scratch(name)
+                self.op("load", ("const", addr, val), writes=(addr,))
+                self.const_map[val] = addr
         return self.const_map[val]
 
     def broadcast_const(self, name, val):

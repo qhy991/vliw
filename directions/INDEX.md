@@ -1,6 +1,6 @@
-# VLIW Kernel Optimization — Direction Index (@ 1156)
+# VLIW Kernel Optimization — Direction Index (@ 1152)
 
-**Global best:** `explore/merged-floor` @ **1156 cycles** (127.80×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1152 cycles** (128.24×), verified `tests/submission_tests.py`.
 
 **Do-not-repeat registry:** [`LESSONS.md`](LESSONS.md) — read before opening any worktree.
 
@@ -8,14 +8,14 @@ Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.
 
 ---
 
-## Engine profile @ 1156 (PSPACE=1)
+## Engine profile @ 1152 (PSPACE=1)
 
 ```
-load  2140  floor 1070.0  ← BINDING
+load  2129  floor 1064.5  ← BINDING
 alu  12440  floor 1036.7
 valu  6017  floor 1002.8
-flow    704  floor  704.0
-realized 1156 | tail gap ~86 (intrinsic load-idle in windup/drain until floor drops)
+flow    716  floor  716.0
+realized 1152 | tail gap ~88 (intrinsic load-idle in windup/drain until floor drops)
 ```
 
 **D4_FREE probe (theoretical):** delete all d4 gathers → **1088**, alu binds.
@@ -31,7 +31,8 @@ realized 1156 | tail gap ~86 (intrinsic load-idle in windup/drain until floor dr
 | 14 | co-bind rebalance | 1179 |
 | 15a | extract valu→alu | 1174 |
 | 15 | s2+s3 muladd fusion | 1157 |
-| 18 | micro purges | **1156** |
+| 18 | micro purges | 1156 |
+| 28 | const→flow rebalance | **1152** |
 
 Full detail: [`RESULT.md`](../RESULT.md).
 
@@ -43,7 +44,7 @@ Full detail: [`RESULT.md`](../RESULT.md).
 |---|---|---|---|---|
 | **1** | 25 | scratch reclaim ≥80w (d4 gate) | `explore/25-scratch-reclaim-d4` | — |
 | **2** | 26 | d4 gather cut → ~1088 band | `explore/26-d4-gather-cut` | #25 |
-| **3** | 27 | alu repack post-load drop | `explore/27-alu-repack-post-load` | #26 or D4_FREE probe |
+| **3** | 27 | alu repack (re-tune pass after #26) | `explore/27-alu-repack-post-load` | **#26 — NO-GO@1156, parked** |
 
 ---
 
@@ -66,6 +67,6 @@ Details: [`LESSONS.md`](LESSONS.md).
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES <= 1156
-PSPACE=0 python tests/submission_tests.py
+python tests/submission_tests.py   # OK, CYCLES <= 1152
+PSPACE=0 python tests/submission_tests.py   # OK, CYCLES <= 1189
 ```

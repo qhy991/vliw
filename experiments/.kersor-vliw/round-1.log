@@ -1,0 +1,5 @@
+=== KerSor VLIW round 1 lever=scratch-audit 2026-07-05T08:58:41+08:00 ===
+BEFORE=1156
+scratch_ptr=1487/1536 free=49 need_for_d4=128 gap=79
+Action: implement #25 scratch reclaim in worktree explore/25-scratch-reclaim-d4
+AFTER=1156 delta=0

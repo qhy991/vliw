@@ -1,0 +1,3 @@
+ROUND_0_RESULT before=1156 after=1156 lever=verify-only
+ROUND_1_RESULT before=1156 after=1156 lever=scratch-audit
+ROUND_2_RESULT before=1152 after=1152 lever=verify-only

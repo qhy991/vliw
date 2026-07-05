@@ -1,6 +1,6 @@
-# LESSONS — do-not-repeat registry @ 1156 (2026-07-05)
+# LESSONS — do-not-repeat registry @ 1152 (2026-07-05)
 
-**Global best:** `explore/merged-floor` @ **1156** cycles (127.80×), PSPACE=1.
+**Global best:** `explore/merged-floor` @ **1152** cycles (128.24×), PSPACE=1.
 
 This file records **verified kills** so future sessions (human, Claude, KerSor)
 do not re-burn worktrees. Every entry has a reproducible probe or committed
@@ -11,13 +11,14 @@ condition is met.**
 
 ## 1. Binding engine rules (read before any op-count change)
 
-After **#15 s2+s3 fusion**, the sole binding floor on the 1156 graph is:
+After **#15 s2+s3 fusion** + **#28 const→flow**, the binding floor on the 1152
+graph is:
 
 ```
-load  2140 ops  floor 1070.0  ← BINDING
+load  2129 ops  floor 1064.5  ← BINDING
 alu  12440 ops  floor 1036.7
-valu  6017 ops  floor 1002.8  (~67 slots slack)
-flow    704 ops  floor  704.0
+valu  6017 ops  floor 1002.8  (~62 slots slack)
+flow    716 ops  floor  716.0
 ```
 
 **Rule A — floor hierarchy:** realized ≥ max(load, alu, valu, flow, store, F).
@@ -31,9 +32,13 @@ second** (see §4).
 **Rule C — mandatory re-anneal:** after any structural op-count change, re-seed
 `omni_anneal.py` (never `--resume` stale champs). Sizes re-probe from emit order.
 
-**Rule D — scratch budget:** measured `scratch_ptr=1487/1536`, **49 words free**.
-Docs citing "16 free" or "+128 from four/nn_v/zero" are **stale** (#18 already
-spent that reclaim).
+**Rule D — scratch budget:** measured `scratch_ptr=1488/1536`, **48 words free**
+(#28 adds a zero-seed word). No clean ≥79-word reclaim exists — see §3 (V8/V9),
+so the **#25 gate stays blocked** and #26 d4-table remains gated.
+
+**Rule E — engine-of-op matters, not just op-count (NEW @ #28):** `const` runs on
+**load** (binding); `add_imm` runs on **flow** (idle). Moving setup consts off the
+binding engine is a real lever independent of op-count. See §2 A1.
 
 ---
 
@@ -68,8 +73,27 @@ materially below 2140), then re-run omni-anneal + #24 levers.
 | V6 | `#13` mem spill | load floor blocks | same as V5 |
 | V7 | More valu deletion while load=1070 | any −N valu with N<67 floor-slots | load floor drops first |
 | V8 | `#27` alu→valu repack @ 1156 | alu(1036.7) **sub-floor** vs load(1070); perfect repack x≈41 → alu=valu≈1009 but binding stays **load 1070**, realized 1156; omni-anneal combine+extract+offset 4k iters found 0 improving moves | load floor drops (#26 lands) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
+| V9 | `#25` node/addr working-set pooling | G=16 → **1319** (+163) to free 256w; genuinely live across the 32-vector cross-vector pipeline | never (structural pipeline depth) |
+| V10 | `#25` mtmp-group reduction for scratch | G=2 frees 73w for **+14c** (1170), G=1 frees 97w for **+19c** (1175); neither reaches the 128w d4 gate cleanly | never (regresses; use d4 table only if a free ≥79w reclaim appears) |
 
-Probe: `experiments/killtest_23.py` (V2), `experiments/probe_27_repack.py` (V8), `#22`/`#27` NO-GO repro blocks.
+Probe: `experiments/killtest_23.py` (V2), `experiments/probe_27_repack.py` (V8),
+round-1 scratch-audit (`experiments/.kersor-vliw/round-2.md`, V9/V10), `#22`/`#27`
+NO-GO repro blocks.
+
+**#25 gate verdict:** no clean ≥79-word reclaim exists (only 13 words genuinely
+dead, all reused). The scratch path to the d4 table (#26) is **structurally
+blocked** — pursue load-floor drops that need no scratch (see A1) instead.
+
+---
+
+## 2b. LANDED load-floor movers (engine rebalance, no scratch)
+
+| ID | Direction | Result | Notes |
+|---|---|---|---|
+| **A1** | `#28` const→flow (`add_imm` on flow, not `const` on load) | **1156→1152** | first 12 setup consts → flow; N>12 serializes (1-slot flow + zero-seed RAW chain); env `CONST_FLOW_N`, default 12 |
+
+**A1 headroom:** 11 setup consts still on load but in less-saturated cycles;
+moving more regressed in the sweep. Re-anneal (Rule C) may repack the −4 further.
 
 ---
 

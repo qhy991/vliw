@@ -1,7 +1,24 @@
-# RESULT: Merged floor-movers — global best **1156**
+# RESULT: Merged floor-movers — global best **1152**
 
 **Branch:** `explore/merged-floor`  
-**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1156** (127.80×)
+**Status:** VERIFIED. `tests/submission_tests.py` → OK. **CYCLES: 1152** (128.24×)
+
+## #28 const→flow rebalance — LANDED (1156 → 1152, −4)
+
+After #15, `load` is the binding floor (2140/2 = 1070). The 58 setup `const` ops
+run on the **load** engine and cluster in the load-saturated windup (cycles 0–47,
+all L2) while `flow` is idle there (F0). `add_imm(dest, a, imm)` is a **flow** op
+(floor 704, ~450 slots slack), so routing the first **12** distinct non-zero setup
+consts to `add_imm(dest, zero_seed, val)` on flow sheds them off the binding
+engine. One shared zero-seed (a single real const load) sources them.
+
+Sweep (real `build_kernel`, PSPACE=1): N=0→1156, N=8→1154, N=10→1153,
+**N=12→1152**, N=14→1154, N=16→1157. Beyond ~12 the zero-seed RAW chain and the
+1-slot flow engine serialize; multiple seeds (S=2,3) give no improvement (the win
+is windup load relief, not seed contention). Engine profile @ 1152: load
+2129/2 = **1064.5** (was 1070.5), flow 716 (was 704). `add_imm` is arithmetically
+exact, so correctness is untouched. New `_const_flow_n` knob (default 12, env
+`CONST_FLOW_N`; N=0 restores all-load). PSPACE=0 fallback also improved 1190→1189.
 
 ## #15 s2+s3 muladd fusion — LANDED (1174 → 1157, −17; stacked w/ #18 → 1156)
 
@@ -124,7 +141,8 @@ valu:  6668 / 6 = 1111.3   alu: 13344 /12 = 1112.0   (co-binding ≈ 1111.5)
 | 15a | d2/d3 extract valu→alu (joint anneal) | 1174 | −5 cycles; tail-pack + 57 extracts→alu |
 | **15** | **s2+s3 muladd fusion + re-anneal** | **1157** | **−17 cycles; −512 valu → load-bound; 538 valu comb / 301 alu ex** |
 | **18** | **micro purges (zero/fvp_v/nn_v/fvp_p_3 gates)** | **1156** | **stacked −1; +34 scratch (16→50 free)** |
-| 10b | idx-space head/tail+mask re-sweep | 1190 | PSPACE=0 fallback only |
+| **28** | **const→flow rebalance (12 consts → add_imm)** | **1152** | **−4; load floor 1070.5→1064.5; flow 704→716** |
+| 10b | idx-space head/tail+mask re-sweep | 1189 | PSPACE=0 fallback only |
 
 ## Falsified on p-space graph (@ 1156 frontier)
 

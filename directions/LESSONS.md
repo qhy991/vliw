@@ -142,6 +142,12 @@ reclaim ceiling **≈14w vs 79 needed**, verified 4 ways: (1) only 14w fully-dea
 alias reclaim 0; (4) overlay ceiling 49+72(d3)=**121<128** and d3/d4 adjacent-live.
 `mtmp` 3→2 regresses (+14c). Doc: `directions/26-d4-gather-cut-NOGO.md`.
 **Resurrection:** a per-vector footprint cut freeing ≥65 clean words w/o alu ops (none known).
+**Correction (#25, `explore/25-scratch-reclaim-d4`):** claim (1) is superseded —
+a free-list recycler that *reuses* interior dead setup scratch for body vecs
+reclaims **30 clean words** (not 14): 49→**80 free**, cycle-neutral, stack-
+verified on #28 (1152, 79 free). Still <128 (48w short, only node/addr pooling
+left, which regresses), so **the NO-GO verdict is unchanged** — 30w < 65w
+resurrection bar. But the recycler is worth cherry-picking (79 free ≫ 49).
 
 ---
 

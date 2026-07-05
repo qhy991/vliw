@@ -443,10 +443,10 @@ class KernelBuilder:
         # the 64 depth-3 emit-order instances. D3_GATHER_MASK is a JSON 0/1 list;
         # a set bit converts that d3 instance to a scalar gather. The E2 D4_COLD
         # win removed d4 gathers from the binding load engine; d3 is the mirror --
-        # mux->gather ADDS load (floor 1043->1047.5), yet the sparse sweep found
-        # emit-order pos 42 (round-14 drain region) packs tighter despite the higher
-        # floor: 1134->1133 (gap 91->85.5), parity/algebra bit-exact, PSPACE=0 1187
-        # unchanged. Shipped default = {42}; set D3_GATHER_MASK=[] to disable.
+        # mux->gather ADDS load (floor 1043->1055.5 at the champ), yet a sparse
+        # triple in the round-14 drain region packs the greedy schedule tighter
+        # despite the higher floor: 1134->1132. parity/algebra bit-exact, PSPACE=0
+        # 1181 (<=1187). Shipped default = {42,50,55}; D3_GATHER_MASK=[] disables.
         _d3gm = _os.environ.get("D3_GATHER_MASK")
         self._d3_gather_mask = None
         if _d3gm is not None:
@@ -454,7 +454,7 @@ class KernelBuilder:
             _parsed = [] if not _d3gm.strip() else _json_d3gm.loads(_d3gm)
             self._d3_gather_mask = [bool(x) for x in _parsed] or None
         else:
-            self._d3_gather_mask = [(i == 42) for i in range(64)]
+            self._d3_gather_mask = [(i in (42, 50, 55)) for i in range(64)]
         # #26 d4-gather-cut: replace the first _d4_mux of the 64 depth-4 gather
         # instances (8 scalar loads each) with a 16-way vselect tournament over
         # broadcasts nb15..nb30 (tree[15..30]). Depth 4 is never enter_x, so no

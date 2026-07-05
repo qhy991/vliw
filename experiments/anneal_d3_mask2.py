@@ -8,7 +8,7 @@ import os, sys, json, random, math
 sys.path.insert(0, "/mnt/user_dir/shihaichao/qinhaiyan/vliw-w6-d3-sparse")
 import perf_takehome as P
 
-CHAMP_POS = [0, 1, 2, 3, 36, 37, 40, 43, 45, 49, 58]
+CHAMP_POS = [0, 1, 2, 3, 4, 37, 39, 40, 46, 54, 58]
 N = 64
 CHAMP = [i in CHAMP_POS for i in range(N)]
 PSPACE0_GATE = 1187
@@ -51,7 +51,11 @@ print(f"seed champ 1121 -> {GLOBAL_C}", flush=True)
 RESTARTS = int(os.environ.get("SA_RESTARTS", "4"))
 ITERS = int(os.environ.get("SA_ITERS", "250"))
 for r in range(RESTARTS):
-    seed_mask = GLOBAL_BEST[:] if r == 0 else CHAMP[:]
+    if r == 0:
+        seed_mask = GLOBAL_BEST[:]
+    else:
+        random.seed(90000 + r)
+        seed_mask = [random.random() < 0.20 for _ in range(N)]
     b, bc = anneal(seed_mask, ITERS, T0=2.0 + r, seed=41000 + r * 7)
     pos = [i for i in range(N) if b[i]]
     p0 = realized(b, "0")

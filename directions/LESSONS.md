@@ -67,8 +67,9 @@ materially below 2140), then re-run omni-anneal + #24 levers.
 | V5 | `#03` phase-2 rem-ring | needs **+256–768** scratch; 49 free | after ≥200 scratch reclaimed |
 | V6 | `#13` mem spill | load floor blocks | same as V5 |
 | V7 | More valu deletion while load=1070 | any −N valu with N<67 floor-slots | load floor drops first |
+| V8 | `#27` alu→valu repack @ 1156 | alu(1036.7) **sub-floor** vs load(1070); perfect repack x≈41 → alu=valu≈1009 but binding stays **load 1070**, realized 1156; omni-anneal combine+extract+offset 4k iters found 0 improving moves | load floor drops (#26 lands) — then repack pulls alu 1036.7→**F 975.5** (~61c), see #27 NO-GO §2 |
 
-Probe: `experiments/killtest_23.py` (V2), `#22` NO-GO doc repro block.
+Probe: `experiments/killtest_23.py` (V2), `experiments/probe_27_repack.py` (V8), `#22`/`#27` NO-GO repro blocks.
 
 ---
 
@@ -89,6 +90,17 @@ realized **1088**, load floor **814**, binding flips to **alu 1036.7**. Prize �
 
 Probe: W0 `#20` branch `RESULT.md` §D4_FREE; `experiments/kill_test_d5.py`.
 
+**#26 probe revalidated on HEAD (2026-07-05, `explore/26-d4-gather-cut` ac7b2a6):**
+`D4_FREE=k` env flag (`experiments/probe_d4_free.py`) frees first k of 64 d4 instances.
+- k=64: realized **1093** (load 814, alu 1036.7 binds) — prize **63c**, matches §4.
+- **Crossover: load ducks under alu wall at k≈12–14**; realized bottoms **~1096 at k≈32**
+  then flat (alu-bound). **Do NOT convert all 64** — the alu wall caps realized.
+- Select budget to alu wall: **flow +332 ops (22 inst), valu +203, alu ZERO** (at wall).
+  Flow-only feasible window **k∈[14,22]**, realized target **~1100–1110**. Wide bottom
+  8 leaf-selects → valu-muladd (delta precompute); top levels → flow. **Never per-lane alu (L3).**
+- **STILL GATED on #25** (scratch 49<128 free). Probe-only; default build unchanged.
+  Doc: `directions/26-d4-gather-cut-PROBE.md`.
+
 ---
 
 ## 5. KerSor / external tooling
@@ -104,7 +116,7 @@ Probe: W0 `#20` branch `RESULT.md` §D4_FREE; `experiments/kill_test_d5.py`.
 
 1. **#25 scratch-reclaim** — free ≥80 clean words without alu regression (enables d4 table).
 2. **#26 d4-gather-cut** — replace 512 d4 scalar gathers using d4 table **after** scratch solved; target D4_FREE band ~1088.
-3. **#27 alu-repack-post-load** — once load drops, alu becomes wall; joint anneal alu↔valu combine/xor/addr-add.
+3. **#27 alu-repack-post-load** — *precondition-parked* (V8): on 1156 alu is sub-floor, repack absorbed (NO-GO). **Validated & banked** on D4_FREE: pulls alu 1036.7 → **F 975.5**. Runs only **after #26** as the mandatory re-tune pass.
 
 **Do not start #26 before #25 kill-test passes** (scratch_ptr ≤ 1408).
 
@@ -134,6 +146,7 @@ PSPACE=0 python tests/submission_tests.py   # must not regress 1190
 | `explore/23-mem-bake-k5-barrier` | c281b49 | `directions/23-mem-bake-k5-barrier-NOGO.md`, `experiments/killtest_23.py` |
 | `explore/24-tailgap-setup-pipe` | 0d3cc56 | `directions/FINDING-24.md`, `analyze_gap.py` |
 | `explore/19a-2round-fuse` | 1f748dc | `directions/19a-2round-fuse-NOGO.md` |
+| `explore/27-alu-repack-post-load` | (this) | `directions/27-alu-repack-post-load-NOGO.md`, `experiments/probe_27_repack.py` |
 
 Cherry-pick NO-GO docs to `merged-floor` when convenient; **LESSONS.md** is the
 single entry point.

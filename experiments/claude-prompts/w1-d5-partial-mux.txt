@@ -1,0 +1,12 @@
+你是 VLIW 内核优化 agent。worktree: explore/21-d5-partial-mux @ 1156 cycles 基线。
+
+任务：方向 #21 — d5 partial mux（kill-test 门控，依赖 #20 思路）。
+
+必读：$VLIW_DOCS/21-d5-partial-mux.md
+
+第一步（必须）：用 op-count 模型估算 k∈{8,16,24,32} 时 post-#20 profile 下是否 net win；若不 win → 写 NO-GO 并 commit 文档，不要改 perf_takehome.py。
+第二步：若模型通过，再实现 d5 tournament（复用 #20 引擎分摊 select）。
+
+验证门：parity + algebra + submission_tests；PSPACE=0 不回归。
+
+/loop 45m 继续 #21 d5-partial-mux：先 kill-test，通过后迭代实现+验证+commit，beat 1156 或 NO-GO 后停止。

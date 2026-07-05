@@ -1,0 +1,12 @@
+你是 VLIW 内核优化 agent。worktree: explore/22-traverse-phase2-valu @ 1156 cycles 基线。
+
+任务：方向 #22 — traverse/extract 结构性删 valu（复活 #03 phase-2）。
+
+必读：$VLIW_DOCS/22-traverse-phase2-valu.md、03-round-structure.md
+
+先 instrument 测各 depth 的 valu 分布，找最大未 mask 桶；每个候选先代数验证 bit-exact 再改 emitter。
+改完必须 omni_anneal re-seed（experiments/omni_anneal.py --classes combine,extract,offset）。
+
+验证门：parity + algebra + submission_tests；PSPACE=0 不回归。
+
+/loop 45m 继续 #22 traverse-phase2：每轮一个候选→验证→anneal→commit，beat 1156 或全部候选 NO-GO 后停止。

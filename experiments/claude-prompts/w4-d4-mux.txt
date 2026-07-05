@@ -1,0 +1,13 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/16-d4-mux-load-floor @ 1174 cycles 基线。
+
+任务：方向 #16 — d4 mux load-floor（k=19 等），依赖 #18 释放的 scratch。
+
+必读：$VLIW_DOCS/16-d4-mux-load-floor.md、18-micro-purges.md、RESULT.md
+
+若 scratch 不足：先做只读分析、trace 枚举、草拟 mux 方案；等 #18 合并后再改 perf_takehome.py。
+
+目标：load-floor −152、flow +285 内找最优 k；合并后 re-anneal。
+
+验证门：parity + algebra + submission_tests；PSPACE=0 不回归。
+
+规则：不改 tests/；勿为赶进度牺牲 scratch 正确性。

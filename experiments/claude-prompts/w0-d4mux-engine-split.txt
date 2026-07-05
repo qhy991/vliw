@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。worktree: explore/20-d4mux-engine-split @ 1156 cycles 基线。
+
+任务：方向 #20 — d4 mux + 引擎分摊 select（修复 #16 flow 墙死因）。
+
+必读：$VLIW_DOCS/20-d4mux-engine-split.md、RESULT.md
+
+核心：depth-4 gather→16-way mux，但 select 不要全走 flow；用 b+c*(a-b) 分摊到 alu/valu/flow。
+先做 scratch 预算（128 words for nb15..nb30），再实现 tournament + D4_MUX_MASK。
+
+迭代目标：beat 1156；load floor 从 1070 往下打。每轮：实现→parity+algebra+submission_tests→commit→汇报。
+
+验证门：python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py && PSPACE=0 python tests/submission_tests.py
+
+规则：不改 tests/；赢家 cherry-pick 回 explore/merged-floor。
+
+启动后请执行：/loop 45m 继续 #20 d4mux-engine-split：每轮检查是否 beat 1156，未达标则继续实现/anneal/调参，达标或 NO-GO 则停止并写 RESULT 结论。

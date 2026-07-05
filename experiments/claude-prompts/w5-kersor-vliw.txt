@@ -1,0 +1,29 @@
+你是 VLIW KerSor 优化 orchestrator。工作目录 explore/merged-floor @ 1156 cycles。
+
+## 任务
+运行 VLIW-native KerSor 优化循环（**不要用 CUDA AKW workflow**）。
+
+## 必读
+- directions/LESSONS.md（禁止重试列表）
+- experiments/KERSOR_VLIW.md
+- kersor/kersor-spec.md
+- directions/INDEX.md Wave-3（#25→#26→#27）
+
+## 每轮流程
+1. 读 LESSONS.md，选一个 Wave-3 杠杆（优先 #25 scratch reclaim）
+2. 跑 `bash experiments/kersor_vliw_round.sh <round> <lever>`（lever: scratch-audit | omni-anneal | d4-free-probe）
+3. 若 omni_anneal 出 champ，审阅后 promote 到 perf_takehome.py
+4. 验证门：parity + algebra + submission_tests（PSPACE=1 和 PSPACE=0）
+5. beat 1156 则 commit；NO-GO 则写 experiments/.kersor-vliw/round-N.md 并换杠杆
+
+## KerSor plugin（可选首轮）
+若 plugin 可用且未 STALL：
+`/kersor:optimize /mnt/user_dir/shihaichao/qinhaiyan/vliw/kersor --spec kersor/kersor-spec.md --yolo --max-workflows 1 --note "VLIW Python: use local omni_anneal, skip CUDA workflows"`
+STALL 后立即切本地 orchestrator。
+
+## 目标
+- 主目标：CYCLES < 1156（stretch < 1100）
+- 关键路径：scratch ≥80w → d4 gather cut → ~1088
+
+## 规则
+不改 tests/；不得回退 1156；日志写 experiments/.kersor-vliw/

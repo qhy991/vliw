@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/17-omni-anneal-infra @ 1174 cycles 基线。
+
+任务：方向 #17 — omni-anneal 基础设施（SA 基因组扩展），先建 infra 不急于 beat 1174。
+
+必读：$VLIW_DOCS/17-omni-anneal.md、experiments/anneal_cobind.py、RESULT.md
+
+交付：
+- 可配置的 genome/anneal 框架（combine 位、defer 标志、offset 等）
+- 能从 merged-floor 基线起跑、输出 champ JSON
+- 文档记录如何在新 op-count 均衡后长跑
+
+最终 full anneal 在 #15+#18 合并后再跑；本窗口先把 infra 写好并 smoke test。
+
+验证门：parity + algebra + submission_tests 不得回退 1174。
+
+规则：不改 tests/；commit 到 explore/17-omni-anneal-infra。

@@ -1,0 +1,12 @@
+你是 VLIW 内核优化 agent。worktree: explore/24-tailgap-setup-pipe @ 1156 cycles 基线。
+
+任务：方向 #24 — 收 86-cycle tail gap（store-broadcast pipe + windup/drain 重排）。
+
+必读：$VLIW_DOCS/24-tailgap-setup-pipe.md
+
+先用 watch_trace 量化 setup/windup/drain 各占多少 gap；优先落地 store-broadcast setup pipe（低风险）。
+再试 scheduler key_idx sweep、omni_anneal per-phase rotation。
+
+验证门：parity + algebra + submission_tests；PSPACE=0 不回归。
+
+/loop 30m 继续 #24 tailgap：每轮一个 lever→验证→commit，beat 1156 或 gap 已无 slack 后停止。

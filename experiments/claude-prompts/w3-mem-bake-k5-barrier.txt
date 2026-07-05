@@ -1,0 +1,12 @@
+你是 VLIW 内核优化 agent。worktree: explore/23-mem-bake-k5-barrier @ 1156 cycles 基线。
+
+任务：方向 #23 — 全量 K5-defer + lazy mem-bake（moonshot §d）。
+
+必读：$VLIW_DOCS/23-mem-bake-k5-barrier.md、19-moonshots.md §d
+
+第一步 kill-test：用 watch_trace 或 scheduler 统计 windup [0,300) 的 load 空闲槽；若 <150 → NO-GO 写文档。
+若通过：实现 mem bake + phase barrier，让 9 个非 defer round 也能 defer K5（−288 valu）。
+
+验证门：parity + algebra + submission_tests；baked mem 必须 bit-exact。
+
+/loop 45m 继续 #23 mem-bake-k5：kill-test→实现→验证→commit，beat 1156 或 NO-GO 后停止。

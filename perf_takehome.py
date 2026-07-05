@@ -421,6 +421,17 @@ class KernelBuilder:
         self._d3_no = 0
         self._d3_total = 0
         self._d3_gather_tail = int(_os.environ.get("D3_GATHER_TAIL", "0"))
+        # #26 d4-gather-cut: replace the first _d4_mux of the 64 depth-4 gather
+        # instances (8 scalar loads each) with a 16-way vselect tournament over
+        # broadcasts nb15..nb30 (tree[15..30]). Depth 4 is never enter_x, so no
+        # K5 bake is needed -- the mux reproduces raw tree[15+p]. The table costs
+        # 128 persistent words (16 leaves x 8 lanes), funded by the #25 recycler
+        # (78 free) + node/addr pooling (_node_pool_groups). Default 0 (off) so
+        # the shipped build stays at 1152. Env D4_MUX / NODE_POOL_G.
+        self._d4_mux = int(_os.environ.get("D4_MUX", "0"))
+        self._d4_no = 0
+        self._node_pool_groups = int(_os.environ.get("NODE_POOL_G", "0"))
+        self._node_pool = []
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
         # p-space traverse (dir #12): store parity `p` in the idx scratch slot
@@ -592,6 +603,43 @@ class KernelBuilder:
             self.op("load", ("load", node + i, addr + i),
                     reads=(addr + i,), writes=(node + i,))
 
+    def _d4_mux_node(self, node, addr, idx, c, j):
+        """#26: node = tree[15+p] for depth-4 p in {0..15}, via a 16-way vselect
+        tournament over broadcasts nb15..nb30 -- replaces 8 scalar gathers.
+        Two 8-way subtrees (mirroring the proven depth-3 shape) select tree[15..22]
+        and tree[23..30] by bits b0,b1,b2 of p; a final b3 select combines them.
+        p-space only; depth 4 is never enter_x so no K5 bake. `vselect(d,cond,A,B)`
+        = cond!=0 ? A : B. Temps: addr (mask holder) + 6 group temps mtmp..mtmp5.
+        Correctness-first: all vselects on flow. `&` extracts via v_alu_ex."""
+        g = j % c["_num_mtmp_groups"]
+        m1 = c[f"mtmp_{g}"]; m2 = c[f"mtmp2_{g}"]; m3 = c[f"mtmp3_{g}"]
+        m4 = c[f"mtmp4_{g}"]; m5 = c[f"mtmp5_{g}"]
+        one_v = c["one"]
+
+        def vsel(dest, cond, A, B):
+            self.op("flow", ("vselect", dest, cond, A, B),
+                    reads=set(self.lanes(cond)) | set(self.lanes(A)) | set(self.lanes(B)),
+                    writes=self.lanes(dest))
+
+        def subtree(base, dest):
+            # 8-way over nb{base..base+7} by b0,b1,b2 of p (idx holds p).
+            nb = [c[f"nb{base+t}"] for t in range(8)]
+            self.v_alu_ex("&", addr, idx, one_v)        # b0
+            vsel(m1, addr, nb[1], nb[0])
+            vsel(m2, addr, nb[3], nb[2])
+            vsel(m3, addr, nb[5], nb[4])
+            vsel(m4, addr, nb[7], nb[6])
+            self.v_alu_ex("&", addr, idx, c["two"])     # b1
+            vsel(m1, addr, m2, m1)
+            vsel(m3, addr, m4, m3)
+            self.v_alu_ex("&", addr, idx, c["four"])    # b2
+            vsel(dest, addr, m3, m1)
+
+        subtree(15, m5)                                 # R_lo -> m5
+        subtree(23, node)                               # R_hi -> node
+        self.v_alu_ex("&", addr, idx, c["eight"])       # b3
+        vsel(node, addr, node, m5)                       # b3 ? R_hi : R_lo
+
     # one round, all vectors (per-vector: original ordering packs best) ----- #
     # depth = round % (forest_height+1). By structural invariant every element
     # is at that tree depth this round, so:
@@ -713,7 +761,15 @@ class KernelBuilder:
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))
         else:
-            self._gather_node(node, addr, idx, c, depth)
+            if self._d4_mux > 0 and self._pspace and depth == 4:
+                d4i = self._d4_no
+                self._d4_no += 1
+                if d4i < self._d4_mux:
+                    self._d4_mux_node(node, addr, idx, c, j)
+                else:
+                    self._gather_node(node, addr, idx, c, depth)
+            else:
+                self._gather_node(node, addr, idx, c, depth)
         # val = val ^ node  (node now free). On no-gather rounds (depth 0/1/2/3
         # -- depth 3 now uses an 8-way vselect mux) the load engine is idle,
         # but valu is still busy with the hash -- so we put this XOR on ALU
@@ -1020,10 +1076,42 @@ class KernelBuilder:
             c[f"mtmp_{g}"] = self.vec(f"mtmp_{g}")
             c[f"mtmp2_{g}"] = self.vec(f"mtmp2_{g}")
             c[f"mtmp3_{g}"] = self.vec(f"mtmp3_{g}")
+            # #26: the d4 16-way tournament needs 2 more group temps than d3's
+            # 8-way (4 subtree results + 1 subtree scratch). Only allocate when
+            # the d4 mux is active to keep the shipped build's footprint intact.
+            if self._d4_mux > 0:
+                c[f"mtmp4_{g}"] = self.vec(f"mtmp4_{g}")
+                c[f"mtmp5_{g}"] = self.vec(f"mtmp5_{g}")
         # backwards-compat aliases
         c["mtmp"] = c["mtmp_0"]
         c["mtmp2"] = c["mtmp2_0"]
         c["mtmp3"] = c["mtmp3_0"]
+
+        # ---- #26 d4 mux table: tree[15..30] broadcasts for the depth-4 16-way
+        # vselect tournament (replaces 8 scalar gathers per converted instance).
+        # depth 4: idx == 15 + p, p in {0..15}, so node = tree[15+p]. Two vloads
+        # stage tree[15..22] and tree[23..30]; 16 broadcasts nb15..nb30 = 128w.
+        # Depth 4 is never enter_x (assert in _emit_vec_round), so NO K5 bake --
+        # the mux reproduces raw tree[15+p]. Only built when _d4_mux > 0.
+        if self._d4_mux > 0 and self._pspace:
+            d4_lo = self.vec("d4_lo")   # tree[15..22]
+            d4_hi = self.vec("d4_hi")   # tree[23..30]
+            fvp_p15 = self.scratch_const(FVP + 15, "fvp_p15")
+            fvp_p23 = self.scratch_const(FVP + 23, "fvp_p23")
+            self.op("load", ("vload", d4_lo, fvp_p15),
+                    reads=(fvp_p15,), writes=tuple(d4_lo + i for i in range(V)))
+            self.op("load", ("vload", d4_hi, fvp_p23),
+                    reads=(fvp_p23,), writes=tuple(d4_hi + i for i in range(V)))
+            # p-space: selector is p in {0..15} (idx == 15 + p), natural order
+            # pos == p -> tree[15+p]. nb15..nb30 broadcast per leaf.
+            for pos in range(16):
+                src = (d4_lo + pos) if pos < 8 else (d4_hi + (pos - 8))
+                c[f"nb{15+pos}"] = self.broadcast_scalar(f"nb{15+pos}", src)
+            c["eight"] = self.broadcast_const("eight", 8)
+            self.free_scratch(d4_lo, V)
+            self.free_scratch(d4_hi, V)
+            self.free_scratch(fvp_p15, 1)
+            self.free_scratch(fvp_p23, 1)
 
         self.emit()  # setup bundles
 
@@ -1051,12 +1139,30 @@ class KernelBuilder:
         # so we reuse them instead of dedicating registers. This cuts the
         # per-vector footprint enough to fit all 32 vectors in scratch.
         vs = []
+        # #26/#25: per-vector node/addr have no cross-round liveness in p-space
+        # (every depth writes both before reading; only idx/val carry state), so
+        # they can be pooled across vectors into _node_pool_groups shared slots
+        # (like the mtmp_{g} temps). This frees (32-G)*2*V words to fund the d4
+        # table, at the cost of WAR serialization -- cheap on the d4-cut graph
+        # (load no longer binds those bundles). G=0 keeps per-vector (shipped).
+        npg = self._node_pool_groups
+        if npg > 0:
+            for g in range(npg):
+                self._node_pool.append(
+                    (self.vec(f"pool_node_{g}"), self.vec(f"pool_addr_{g}")))
         for j in range(K_VEC):
             p = f"v{j}"
-            entry = {
-                "idx": self.vec(f"{p}_idx"), "val": self.vec(f"{p}_val"),
-                "node": self.vec(f"{p}_node"), "addr": self.vec(f"{p}_addr"),
-            }
+            if npg > 0:
+                pn, pa = self._node_pool[j % npg]
+                entry = {
+                    "idx": self.vec(f"{p}_idx"), "val": self.vec(f"{p}_val"),
+                    "node": pn, "addr": pa,
+                }
+            else:
+                entry = {
+                    "idx": self.vec(f"{p}_idx"), "val": self.vec(f"{p}_val"),
+                    "node": self.vec(f"{p}_node"), "addr": self.vec(f"{p}_addr"),
+                }
             # For n_groups==1 iaddr/vaddr are compile-time constants.
             if j > 0:
                 if n_groups > 1:

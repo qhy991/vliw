@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # Launch Claude Code auto-mode agents in tmux session 3, windows 0-4.
-# Each window runs in its own git worktree (isolated branches).
+# Wave-2 sub-1000 parallel lanes (one worktree per window).
 set -euo pipefail
 
 SESSION="${1:-3}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PARENT="$(dirname "$ROOT")"
 PROMPTS="$ROOT/experiments/claude-prompts"
 DOCS="$ROOT/directions"
 CLAUDE="/home/qinhaiyan/.local/lib/node_modules/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
+BASELINE_CYCLES=1156
 
 declare -a WINS=(
-  "0|$ROOT|explore/merged-floor|#14 co-bind polish|w0-cobind.txt"
-  "1|$ROOT/explore/03-round-structure|explore/03-round-structure|#B1 valu→alu d2/d3|w1-valu-alu.txt"
-  "2|$ROOT/explore/03-round-structure|explore/03-round-structure|#B2 scratch liveness|w2-scratch.txt"
-  "3|$ROOT/explore/10-autotuner|explore/10-autotuner|#B3 offset×mask×xor|w3-sweep.txt"
-  "4|$ROOT|explore/merged-floor|#14 anneal runner|w4-anneal.txt"
+  "0|${PARENT}/vliw-20-d4mux-engine-split|explore/20-d4mux-engine-split|#20 d4mux engine-split|w0-d4mux-engine-split.txt"
+  "1|${PARENT}/vliw-21-d5-partial-mux|explore/21-d5-partial-mux|#21 d5 partial mux|w1-d5-partial-mux.txt"
+  "2|${PARENT}/vliw-22-traverse-phase2-valu|explore/22-traverse-phase2-valu|#22 traverse phase2|w2-traverse-phase2-valu.txt"
+  "3|${PARENT}/vliw-23-mem-bake-k5-barrier|explore/23-mem-bake-k5-barrier|#23 mem-bake K5|w3-mem-bake-k5-barrier.txt"
+  "4|${PARENT}/vliw-24-tailgap-setup-pipe|explore/24-tailgap-setup-pipe|#24 tailgap pipe|w4-tailgap-setup-pipe.txt"
 )
 
 pick_token() {
@@ -23,7 +25,7 @@ pick_token() {
     echo "$ANTHROPIC_AUTH_TOKEN"
     return 0
   fi
-  for w in 0 1 2 3 4; do
+  for w in 0 1 2 3 4 5; do
     pane="$(tmux capture-pane -t "${SESSION}:$w" -p -S -300 2>/dev/null || true)"
     tok="$(grep -oE 'ANTHROPIC_AUTH_TOKEN=sk-[^[:space:]]+' <<<"$pane" | tail -1 | cut -d= -f2-)"
     if [[ -n "$tok" ]]; then
@@ -78,7 +80,7 @@ send_prompt() {
   prefix="工作目录: $cwd
 分支: $branch
 文档目录: $DOCS
-集成目标: explore/merged-floor @ 1179 cycles
+集成目标: explore/merged-floor @ ${BASELINE_CYCLES} cycles
 
 "
   prompt="$(echo "$prefix$body" | tr '\n' ' ' | sed 's/  */ /g')"
@@ -102,24 +104,15 @@ setup_window() {
 
   reset_pane "$win"
 
-  # Phase 1: env + cd (single atomic command)
   tmux send-keys -t "$win" "export PATH=/home/qinhaiyan/.local/bin:\$PATH && export GIT_PAGER=cat && export VLIW_ROOT=$ROOT && export VLIW_DOCS=$DOCS && export ANTHROPIC_BASE_URL=https://cloud.infini-ai.com/maas && export ANTHROPIC_AUTH_TOKEN=$token && export ANTHROPIC_MODEL=claude-opus-4-8 && export ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.2 && export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash && source /mnt/user_dir/shihaichao/qinhaiyan/miniconda3/etc/profile.d/conda.sh && conda activate vllm && cd $cwd && echo '=== $title | branch=$branch | pwd=\$(pwd) ==='" C-m
   sleep 4
 
-  # Phase 2: git status + optional merge
-  if [[ "$branch" != "explore/merged-floor" ]]; then
-    tmux send-keys -t "$win" "git branch --show-current && git log --oneline -1 && (git merge --abort 2>/dev/null || true) && git merge explore/merged-floor -m 'merge: sync 1179 base' || echo 'MERGE CONFLICT'" C-m
-    sleep 8
-  else
-    tmux send-keys -t "$win" "git branch --show-current && git log --oneline -1" C-m
-    sleep 2
-  fi
+  tmux send-keys -t "$win" "git branch --show-current && git log --oneline -1 && (git merge --abort 2>/dev/null || true) && git merge explore/merged-floor -m 'merge: sync ${BASELINE_CYCLES} base' || echo 'MERGE CONFLICT'" C-m
+  sleep 8
 
-  # Phase 3: baseline test
   tmux send-keys -t "$win" "python tests/submission_tests.py 2>&1 | tail -3" C-m
   sleep 12
 
-  # Phase 4: start Claude
   tmux send-keys -t "$win" "$CLAUDE --permission-mode bypassPermissions" C-m
 
   if wait_claude "$win" 90; then
@@ -136,7 +129,7 @@ if [[ -z "${TOKEN:-}" ]]; then
 fi
 echo "Using token (${#TOKEN} chars)"
 
-echo "Launching Claude auto agents in tmux session $SESSION"
+echo "Launching wave-2 sub-1000 Claude agents in tmux session $SESSION (windows 0-4)"
 for entry in "${WINS[@]}"; do
   IFS='|' read -r idx cwd branch title prompt <<<"$entry"
   setup_window "$idx" "$cwd" "$branch" "$title" "$prompt" "$TOKEN"
@@ -144,9 +137,11 @@ for entry in "${WINS[@]}"; do
 done
 
 echo "Done. Attach: tmux attach -t $SESSION"
-echo "Worktree map:"
-echo "  W0 → merged-floor (#14 co-bind polish)"
-echo "  W1 → 03-round-structure (#B1 valu→alu)"
-echo "  W2 → 03-round-structure (#B2 scratch)"
-echo "  W3 → 10-autotuner (#B3 sweep)"
-echo "  W4 → merged-floor (#14 anneal runner)"
+echo "Worktree map (W5 = omni-anneal monitor / manual):"
+echo "  W0 → vliw-20-d4mux-engine-split   (#20 d4 mux engine-split)"
+echo "  W1 → vliw-21-d5-partial-mux       (#21 d5 partial mux)"
+echo "  W2 → vliw-22-traverse-phase2-valu (#22 traverse phase2)"
+echo "  W3 → vliw-23-mem-bake-k5-barrier  (#23 mem-bake K5)"
+echo "  W4 → vliw-24-tailgap-setup-pipe   (#24 tailgap pipe)"
+echo ""
+echo "Each agent prompt includes /loop for iterative optimization until beat ${BASELINE_CYCLES} or NO-GO."

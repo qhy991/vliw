@@ -1,0 +1,16 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/15-s2s3-fusion @ 1174 cycles 基线。
+
+任务：方向 #15 — stage-2+3 muladd fusion（最高优先级）。
+
+必读：$VLIW_DOCS/15-s2s3-fusion.md、RESULT.md、INDEX.md
+
+实现要点：
+- 在 perf_takehome.py 将 hash s2+s3 融合为 2 muladd + 1 combine（删除每 (vec,round) 1 个 valu-locked op，−512 valu）
+- 代数必须 bit-exact（对照 myhash / algebra_check_ported.py）
+- 改完后跑 experiments/anneal_cobind.py 或等价 re-anneal 兑现 floor 收益
+
+目标：beat 1174；预期 realized ~1105–1125。
+
+验证门：python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py && PSPACE=0 python tests/submission_tests.py
+
+规则：不改 tests/；commit 到本分支；赢家 cherry-pick 回 explore/merged-floor。

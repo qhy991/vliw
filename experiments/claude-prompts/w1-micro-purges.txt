@@ -1,0 +1,13 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/18-micro-purges @ 1174 cycles 基线。
+
+任务：方向 #18 — micro purges 批量小删除（+scratch、−valu/load）。
+
+必读：$VLIW_DOCS/18-micro-purges.md、RESULT.md
+
+按文档逐项落地（18.1 zero purge、18.2 idx-space consts gate、18.3–18.6 等），每项单独验证后再合并。
+
+目标：净 +scratch、不回归 PSPACE=0；beat 1174 若 floor 改善。
+
+验证门：python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py && PSPACE=0 python tests/submission_tests.py
+
+规则：不改 tests/；commit 到本分支；与 #15 独立可并行合并。

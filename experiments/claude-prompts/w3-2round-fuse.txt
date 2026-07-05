@@ -1,0 +1,14 @@
+你是 VLIW 内核优化 agent。本窗口 worktree: explore/19a-2round-fuse @ 1174 cycles 基线。
+
+任务：方向 #19 §a — 2-round fuse kill test（1 天内证伪或开新 lane）。
+
+必读：$VLIW_DOCS/19-moonshots.md（§a 节）、RESULT.md
+
+步骤：
+1. 代数/parity 验证 2-round 融合是否 bit-exact
+2. 若不可行，写清 NO-GO 证据并 commit 文档结论
+3. 若可行，实现最小原型 + submission_tests，评估 floor 与 realized
+
+验证门：python parity_check.py && python algebra_check_ported.py && python tests/submission_tests.py
+
+规则：不改 tests/；快速 kill test 优先于深度实现。

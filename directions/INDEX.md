@@ -1,6 +1,6 @@
-# VLIW Kernel Optimization — Direction Index (@ 1152)
+# VLIW Kernel Optimization — Direction Index (@ 1151)
 
-**Global best:** `explore/merged-floor` @ **1152 cycles** (128.24×), verified `tests/submission_tests.py`.
+**Global best:** `explore/merged-floor` @ **1151 cycles** (128.35×), verified `tests/submission_tests.py`.
 
 **Do-not-repeat registry:** [`LESSONS.md`](LESSONS.md) — read before opening any worktree.
 
@@ -33,6 +33,7 @@ realized 1152 | tail gap ~88 (intrinsic load-idle in windup/drain until floor dr
 | 15 | s2+s3 muladd fusion | 1157 |
 | 18 | micro purges | 1156 |
 | 28 | const→flow rebalance | **1152** |
+| 30 | const→flow per-instance mask (KerSor variant-r1) | **1151** |
 
 Full detail: [`RESULT.md`](../RESULT.md).
 
@@ -72,6 +73,6 @@ Details: [`LESSONS.md`](LESSONS.md).
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES <= 1152
-PSPACE=0 python tests/submission_tests.py   # OK, CYCLES <= 1189
+python tests/submission_tests.py   # OK, CYCLES <= 1151
+PSPACE=0 python tests/submission_tests.py   # OK, CYCLES <= 1187
 ```

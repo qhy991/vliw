@@ -1,6 +1,6 @@
-# LESSONS — do-not-repeat registry @ 1152 (2026-07-05)
+# LESSONS — do-not-repeat registry @ 1151 (2026-07-05)
 
-**Global best:** `explore/merged-floor` @ **1152** cycles (128.24×), PSPACE=1.
+**Global best:** `explore/merged-floor` @ **1151** cycles (128.35×), PSPACE=1 (PSPACE=0 1187).
 
 This file records **verified kills** so future sessions (human, Claude, KerSor)
 do not re-burn worktrees. Every entry has a reproducible probe or committed
@@ -101,6 +101,7 @@ on D4_FREE graph, not "never").
 | ID | Direction | Result | Notes |
 |---|---|---|---|
 | **A1** | `#28` const→flow (`add_imm` on flow, not `const` on load) | **1156→1152** | first 12 setup consts → flow; N>12 serializes (1-slot flow + zero-seed RAW chain); env `CONST_FLOW_N`, default 12 |
+| **A1b** | `#30` per-instance const→flow **mask** (SA-repacked *which* consts route to flow) | **1152→1151** | KerSor variant-r1 beam solver found it; 11 consts (not first-12) via `_const_flow_mask`; realizes the A1 headroom; PSPACE=0 1189→1187; env `CONST_FLOW_MASK` |
 
 **A1 headroom:** the 47 const-loads still on load are **NOT** in less-saturated
 cycles — probe `experiments/probe_const_placement.py` shows **46/47 land in

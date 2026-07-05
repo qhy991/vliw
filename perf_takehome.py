@@ -383,7 +383,25 @@ class KernelBuilder:
         import os as _os_cf
         self._const_flow_n = int(_os_cf.environ.get("CONST_FLOW_N", "12"))
         self._const_flow_no = 0
+        self._const_flow_idx = 0   # const-emit index over distinct non-zero consts
         self._zero_seed = None
+        # Per-instance const->flow gene (SA-annealable). When None, fall back to
+        # the first-_const_flow_n-in-emit-order heuristic (default build is byte-
+        # identical). When set, it is a list[bool] in const-emit order: True ->
+        # route this const to add_imm on flow, False -> keep it as a load const.
+        # Mirrors _combine_mask/_extract_mask. Correctness is untouched either
+        # way (add_imm(zero_seed, val) is arithmetically exact).
+        #
+        # SA champ (this file): joint const_flow x {combine,extract,offset} anneal
+        # from the #28 fresh seed repacks WHICH consts land on flow (11, not the
+        # heuristic's first 12) and shaves the last -1c the #28 LESSONS A1 left
+        # open: full-32 realized 1152 -> 1151. Indexed by _const_flow_idx over the
+        # 58 distinct non-zero consts. Set None (or CONST_FLOW_N-only) to restore
+        # the 1152 heuristic build.
+        self._const_flow_mask = [bool(x) for x in (
+            1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1,
+            1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)]
         # Targeted alu->valu rebalance for the hash XOR-combines. Each of the
         # 3 combines per (vec, round) defaults to 8 ALU slots (v_alu_scalar);
         # switching to 1 valu slot (v_alu) moves it to the valu engine. The
@@ -434,6 +452,13 @@ class KernelBuilder:
         self._node_pool = []
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
+        # CONST_FLOW_MASK env plumbing (annealer champ injection, no code edit):
+        # a JSON list of 0/1 in const-emit order overriding _const_flow_mask.
+        # Unset -> None -> default first-N heuristic (byte-identical build).
+        _cfm = _os.environ.get("CONST_FLOW_MASK")
+        if _cfm:
+            import json as _json_cf
+            self._const_flow_mask = [bool(x) for x in _json_cf.loads(_cfm)]
         # p-space traverse (dir #12): store parity `p` in the idx scratch slot
         # instead of the full index. idx == 2^d - 1 + p, so node lookups use
         # clean bits of p and the deep-round traverse collapses to one muladd
@@ -505,8 +530,23 @@ class KernelBuilder:
             # 1-slot flow engine serialize (swept: N=12 -> 1152, N>=16 regresses).
             # add_imm is arithmetically exact (dest = scratch[zero]+val), so
             # correctness is untouched. N=0 restores the all-load behavior.
-            if (self._const_flow_n > 0 and val != 0
-                    and self._const_flow_no < self._const_flow_n):
+            # _const_flow_mask (when not None) overrides the first-N heuristic
+            # with a per-instance (SA-annealable) decision indexed by
+            # _const_flow_idx (const-emit order over all distinct non-zero
+            # consts). _const_flow_no continues to count only flow-routed consts
+            # (preserves the probe/heuristic meaning). val==0 is never routed.
+            if val != 0:
+                emit_i = self._const_flow_idx
+                self._const_flow_idx += 1
+                if self._const_flow_mask is not None:
+                    use_flow = (emit_i < len(self._const_flow_mask)
+                                and bool(self._const_flow_mask[emit_i]))
+                else:
+                    use_flow = (self._const_flow_n > 0
+                                and self._const_flow_no < self._const_flow_n)
+            else:
+                use_flow = False
+            if use_flow:
                 if self._zero_seed is None:
                     self._zero_seed = self.alloc_scratch("zero_seed")
                     self.op("load", ("const", self._zero_seed, 0),

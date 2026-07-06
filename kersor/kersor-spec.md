@@ -8,16 +8,16 @@
 
 - op: VLIW instruction scheduler (`KernelBuilder.build_kernel`)
 - backend: python (combinatorial / no GPU)
-- target_speedup: 1.094  (1094 → 1000 cycles; absolute baseline 147734 cycles)
+- target_speedup: 1.092  (1092 → 1000 cycles; absolute baseline 147734 cycles)
 - status: VERIFIED
 
 ## Constraints
 
 - Do NOT modify `tests/` or `problem.py`
-- Global best gate: `CYCLES <= 1094` (PSPACE=1), PSPACE=0 must stay <= 1184
+- Global best gate: `CYCLES <= 1092` (PSPACE=1), PSPACE=0 must stay <= 1184
 - Read `directions/LESSONS.md` before any experiment — do not retry listed NO-GO levers
-- Landed: #28 const→flow (1156→1152), #30 const_flow_mask (1152→1151), W6-C joint d3×d4 SA (1120→1111), W7 seed B0+d3/d4+offset retune (1111→1094)
-- Active Wave-7 @ 1094: new deep-gather representation or structural hash/traverse deletion; parameter-only SA is low priority
+- Landed: W7-C joint offset+combine (1093→1092), combine #1304 (1094→1093), B0+d3/d4 retune
+- Active Wave-8 @ 1092: exotic genome search (W7-D); sub-1000 still needs structural load cut
 - KerSor: `--allow-workflow-evolution --allow-workflow-authoring`; use VLIW-native workflows, NOT CUDA
 
 ---
@@ -28,32 +28,32 @@
 op=VLIW-perf_takehome-scheduler
 backend=python
 kernel_language=python
-target_speedup=1.094
+target_speedup=1.092
 seed_origin=provided_kernel
-kernel_path=/mnt/user_dir/shihaichao/qinhaiyan/vliw/perf_takehome.py
+kernel_path=/mnt/user_dir/shihaichao/qinhaiyan/vliw-w7-optimize/perf_takehome.py
 integration_pattern=standalone
 timing_method=e2e
 metric_contract=cycles
 forbid_pytest_wall_as_headline=false
-baseline_id=wave7-1094
-baseline_ms=1094
+baseline_id=wave7-1092
+baseline_ms=1092
 min_runs=3
 require_ci=false
 status=VERIFIED
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:test-method.md===
-# Test Method — VLIW perf_takehome @ 1094
+# Test Method — VLIW perf_takehome @ 1092
 
 ## Environment
 - Conda env: `vllm`
-- Working directory: `/mnt/user_dir/shihaichao/qinhaiyan/vliw`
+- Working directory: `/mnt/user_dir/shihaichao/qinhaiyan/vliw-w7-optimize`
 - Default env: `PSPACE=1`
 
 ## Correctness
 ```bash
 source /mnt/user_dir/shihaichao/qinhaiyan/miniconda3/etc/profile.d/conda.sh && conda activate vllm
-cd /mnt/user_dir/shihaichao/qinhaiyan/vliw
+cd /mnt/user_dir/shihaichao/qinhaiyan/vliw-w7-optimize
 python parity_check.py && python algebra_check_ported.py
 ```
 - Pass: parity 0 violations; algebra ALL-PASS
@@ -62,29 +62,24 @@ python parity_check.py && python algebra_check_ported.py
 ```bash
 python tests/submission_tests.py
 ```
-- Pass: prints `OK`, `CYCLES: N` where N <= current best (1094)
+- Pass: prints `OK`, `CYCLES: N` where N <= current best (1092)
 - Also run: `PSPACE=0 python tests/submission_tests.py` (must not regress 1184)
 
 ## Baseline
-- Baseline Latency (ms): 1094
-- Baseline: wave7-1094
-- Baseline Detail: B0_CARRY + joint sparse d3/d4 masks + offset retune @ 1094 cycles (135.04× over 147734 reference)
+- Baseline Latency (ms): 1092
+- Baseline: wave7-1092
+- Baseline Detail: W7-C joint offset+combine tail retune @ 1092 cycles
 - Timing Method: e2e
 - Baseline Status: present
 
 ## Local optimization tools (USE THESE — not CUDA workflows)
 | Tool | Purpose |
 |------|---------|
-| `experiments/anneal_d3d4_joint.py` | Joint d3_gather × d4_cold mask SA (landed 1111; can be adapted to B0/rot29) |
-| `experiments/omni_anneal.py` | Joint SA: combine/extract/offset/const_flow (must re-seed on 1094 graph; rot27 is stale) |
-| `experiments/kersor_vliw_round.sh` | One KerSor-style round orchestrator |
-| `experiments/killtest_23.py` | Mem-bake kill test (NO-GO) |
-| `experiments/kill_test_d5.py` | d5 mux kill test (NO-GO) |
-| `experiments/analyze_gap.py` | Tail gap measurement |
+| `experiments/anneal_joint_w7c.py` | Joint offset+combine SA (landed 1093→1092) |
 | `directions/LESSONS.md` | Do-not-repeat registry |
 
 ## User guidance (KerSor orchestrator)
-- Baseline 1094 (B0 + joint d3/d4 + offset retune). Beat 1094; PSPACE=0 <= 1184.
+- Baseline **1092** (W7-C joint offset+combine). Beat 1092; PSPACE=0 <= 1184.
 - NOT CUDA: evolve VLIW-native workflow on STALL.
 - Priority: (1) new deep-gather representation that is correctness-preserving, not `GATHER_FREE`; (2) structural traverse/hash deletion; (3) multi-rot tail/objective retune after any structural cut.
 - Read: directions/39-wave7-kersor-1094.md, directions/35-orthogonal-axes.md, directions/LESSONS.md

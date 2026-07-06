@@ -1,6 +1,20 @@
-# LESSONS — do-not-repeat registry @ 1134 (2026-07-05)
+# LESSONS — do-not-repeat registry @ 1111 (2026-07-06)
 
-**Global best:** `explore/merged-floor` @ **1134** cycles (130.28×), PSPACE=1 (PSPACE=0 1187).
+**Global best:** `explore/wave6-1120` @ **1111** cycles (133.0×), PSPACE=1 (PSPACE=0 **1180**).
+
+## LANDED @ 1111 — W6-C joint d3_gather × d4_cold SA (2026-07-06)
+- **1120→1111 (−9c)** via co-searched sparse masks on the 1120 graph (NOT cherry-pick
+  of single-axis champs). Shipped defaults:
+  - `D3_GATHER_MASK = {0,1,2,3,4,34,35,44,45,50,54}`
+  - `D4_COLD_MASK   = {7,12,16,22,24,33,37}`
+- Driver: `experiments/anneal_d3d4_joint.py`. Doc: `directions/33-d3d4-joint-anneal.md`.
+- Floors @ 1111: load **1083.5** BIND, alu 1036.7, F 1028.9, flow 743, tail **27.5**.
+  Win is **tail packing**, not load-floor drop — Pareto shows best realized keeps the
+  *highest* load (1083.5); more d4-cold alone regresses realized.
+- **W6-A d4cold-wide** independently found 1111 with a different mask pair (same floors);
+  pure d4 SA **converged** — do not resume wide d4-only search on this graph.
+- **Stacking rule:** cherry-picking combine/xor champs from 1134/1120 graphs onto 1111
+  **regresses** (1115+). Any repack must re-seed SA on the 1111 graph with d3+d4 fixed.
 
 This file records **verified kills** so future sessions (human, Claude, KerSor)
 do not re-burn worktrees. Every entry has a reproducible probe or committed

@@ -456,7 +456,7 @@ class KernelBuilder:
             _parsed = [] if not _d3gm.strip() else _json_d3gm.loads(_d3gm)
             self._d3_gather_mask = [bool(x) for x in _parsed] or None
         else:
-            _d3champ = (0, 1, 2, 3, 4, 37, 39, 40, 46, 54, 58)
+            _d3champ = (0, 1, 2, 3, 4, 34, 35, 44, 45, 50, 54)
             self._d3_gather_mask = [(i in _d3champ) for i in range(64)]
         # #26 d4-gather-cut: replace the first _d4_mux of the 64 depth-4 gather
         # instances (8 scalar loads each) with a 16-way vselect tournament over
@@ -483,7 +483,7 @@ class KernelBuilder:
             if self._d4_cold_mask_disabled:
                 self._d4_cold_mask = None
         elif not self._d4_cold_mask_disabled and self._d4_mux == 0 and self._d4_cold == 0:
-            self._d4_cold_mask = [(i in (25, 26, 27, 29, 31, 34)) for i in range(64)]
+            self._d4_cold_mask = [(i in (7, 12, 16, 22, 24, 33, 37)) for i in range(64)]
         self._d4_no = 0
         self._node_pool_groups = int(_os.environ.get("NODE_POOL_G", "0"))
         self._node_pool = []

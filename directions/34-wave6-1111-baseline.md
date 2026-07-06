@@ -1,6 +1,16 @@
 # Wave-6 baseline @ 1111 (2026-07-06)
 
-**Branch:** `explore/wave6-1120` (HEAD tracks joint-SA champ from `explore/v120-d3d4-joint`).
+**Branch:** `explore/wave6-1111` (global best; perf from `explore/v120-d3d4-joint` joint-SA champ `c31f27c`).
+
+## Exploration ledger (all @ 1111, 2026-07-06)
+
+| Axis | Verdict | Doc |
+|------|---------|-----|
+| O1 load (const→flow, vload, co-bind) | NO-GO | `34-wave6-1111-baseline.md` §Axis B (d4cold-wide) |
+| O2 valu/F fusion | NO-GO | `O2-valu-fusion-NOGO.md` |
+| O3 alu b0-carry | **LANDED gated** (`B0_CARRY=1`, default OFF) | `36-O3-alu-cut.md`, `37-O1-O3-stack-union.md` |
+| O4 tail pos_offset | NO-GO | `O4-tail-pack-NOGO.md` |
+| scratch-reclaim | NO-GO (21w free; E2 costs 48w) | `38-scratch-reclaim-1111.md` |
 
 ## Shipped graph
 - `tests/submission_tests.py` **1111** · `PSPACE=0` **1180** (≤1187 gate)
@@ -23,11 +33,8 @@ tail    27.5
    clusters, scratch reclaim — NOT more d4-cold (Pareto NO-GO).
 2. **Co-bind cut** after load≈F: combine/xor/const_flow SA re-seeded on 1111 graph.
 
-## Active axes (post-1111)
-| Axis | Worktree | Focus |
-|------|----------|-------|
-| A→B | `v120-d4cold-wide` | Pivot: const→flow + vload (d4 SA done) |
-| C | `v120-d3d4-joint` | Converged @ 1111; infra only |
-| B | `v120-load-shed` | const→flow / vload (partial) |
-| D | `v120-cobind-cut` | Re-seed combine SA on 1111 |
-| E | `v120-omni-joint` | Full omni SA from 1111 seed |
+## Next steps (post-exploration)
+
+All orthogonal axes at 1111 are closed or gated. Sub-1111 requires a **new d5+
+gather representation** (algorithmic, not engine rebalance). Banked lever:
+`B0_CARRY=1` stacks after any real load-floor cut (`37-O1-O3-stack-union.md`).

@@ -1,6 +1,6 @@
 # LESSONS — do-not-repeat registry @ 1111 (2026-07-06)
 
-**Global best:** `explore/wave6-1120` @ **1111** cycles (133.0×), PSPACE=1 (PSPACE=0 **1180**).
+**Global best:** `explore/wave6-1111` @ **1111** cycles (133.0×), PSPACE=1 (PSPACE=0 **1180**).
 
 ## LANDED @ 1111 — W6-C joint d3_gather × d4_cold SA (2026-07-06)
 - **1120→1111 (−9c)** via co-searched sparse masks on the 1120 graph (NOT cherry-pick

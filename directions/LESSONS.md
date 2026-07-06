@@ -87,6 +87,7 @@ binding engine is a real lever independent of op-count. See §2 A1.
 | S7 | `#24` store-broadcast setup pipe | setup is **load-bound** (29 loads), not valu | moving bcasts to store+vload regresses |
 | S8 | `#24` setup/body barrier merge | **1192** | greedy mispacks; 5 idle setup slots anyway |
 | S9 | `#24` tail-gap repack without floor drop | windup ~48c + drain ~35c load-idle intrinsic | d0–d3 have no gathers to fill load engine |
+| S10 | **O4 pos_offset SA @ 1111** (multi-rot oracle, 4 runs warm+cold) | all → **1111** (cold restart bottoms 1120) | tail 27.5 is structural windup/drain load-idle (S9); pos_offset is at schedule-local optimum. **Trap:** shipped offset tuned w/ rot27-only oracle → misreads perturbed offsets +228c; must sweep rot window {25..29}. Driver `experiments/anneal_pos_offset.py`, doc `directions/O4-tail-pack-NOGO.md`. **Resurrection:** only after a load-floor mover lands (drain gets gather work). |
 
 **Resurrection for S3/S9:** only after a **load floor-mover lands** (load used drops
 materially below 2140), then re-run omni-anneal + #24 levers.

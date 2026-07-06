@@ -1,0 +1,19 @@
+## Handoff Context
+
+_Transfer object through round 0, mode=full. Honor the directives below._
+
+### Do not retry (MUST NOT repeat — `check-directive-compliance.py` will flag a re-attempt)
+
+- [hypothesized·user_provided] Single-position sweep + anchored combo search over d3 mask stalls at the 1132 local optimum. The 1120 champion needs FULL-SPACE simulated annealing (64-bit bit-flip spanning both d3 rounds). prefix-k on d3/d4 is NO-GO. (op=VLIW-scheduler, shape=fh10-r16-b256, dtype=n/a) [from r0:user-prior]
+
+### Search-space constraints
+
+- [hypothesized·user_provided] Hard gate: land only masks with full-32 PSPACE=1 < 1120 AND PSPACE=0 <= 1187. rot-27 oracle (0.33s) is a strict upper bound on full realized, so use it as a cheap search signal then full-confirm. Do not modify tests/. (op=VLIW-scheduler, shape=fh10-r16-b256, dtype=n/a) [from r0:user-prior]
+
+### Proven starting point
+
+- [hypothesized·user_provided] Shipped champion @1120: D3_GATHER_MASK={0,1,2,3,4,37,39,40,46,54,58}, D4_COLD_MASK={25,26,27,29,31,34}. Seed any joint SA from here. (op=VLIW-scheduler, shape=fh10-r16-b256, dtype=n/a) [from r0:user-prior]
+
+### Known bottlenecks to target (MUST attempt at least one candidate against each — the post-round directive-compliance check records when none is honored)
+
+- [hypothesized·user_provided] Joint D3_GATHER_MASK x D4_COLD_MASK is the live axis: d3-alone -4, d4-alone -18, both -32 (synergy on load engine). Search the two masks jointly, not separately. (op=VLIW-scheduler, shape=fh10-r16-b256, dtype=n/a) [from r0:user-prior]

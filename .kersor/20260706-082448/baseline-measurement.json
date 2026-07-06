@@ -1,0 +1,7 @@
+{
+  "baseline_ms": 1120,
+  "metric": "cycles",
+  "source": "submission_tests",
+  "verified_at": "2026-07-05",
+  "branch": "explore/merged-floor"
+}

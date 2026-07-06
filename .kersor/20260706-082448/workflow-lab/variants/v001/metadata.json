@@ -1,0 +1,44 @@
+{
+  "method_category": "search",
+  "topology": "iterative",
+  "languages": [
+    "python"
+  ],
+  "backends": [
+    "python"
+  ],
+  "default_backend": "python",
+  "backend_matrix_eligible": false,
+  "requires_ncu": false,
+  "requires_harness": false,
+  "role": "optimizer",
+  "fidelity_boundary": "experimental_variant",
+  "speedup_field": "overall_speedup",
+  "best_kernel_field": "best_kernel_code",
+  "all_args": [
+    "project_root",
+    "exp_dir",
+    "iters",
+    "restarts",
+    "seed",
+    "best_known",
+    "pspace0_bound",
+    "collect",
+    "topk",
+    "model_mechanical",
+    "model_judgment"
+  ],
+  "required_args": [
+    "project_root"
+  ],
+  "selection_tags": [
+    "workflow_evolution"
+  ],
+  "candidate_type": "fork_variant",
+  "base_workflow": "vliw-sparse-mask-search",
+  "name": "vliw-d3d4-joint-anneal",
+  "directory": "workflow-lab/variants/v001",
+  "experimental": true,
+  "lineage_path": ".kersor/20260706-082448/workflow-lab/variants/v001/lineage.json",
+  "validation_path": ".kersor/20260706-082448/workflow-lab/variants/v001/validation.json"
+}

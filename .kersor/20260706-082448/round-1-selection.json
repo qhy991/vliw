@@ -1,0 +1,466 @@
+{
+  "schema_version": 2,
+  "evidence_warnings": [],
+  "round": 1,
+  "session_dir": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448",
+  "catalog_path": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/workflow-catalog.json",
+  "selector": "/home/qinhaiyan/KerSor/scripts/select-workflow.sh",
+  "selected_workflow": {
+    "name": "vliw-d3d4-joint-anneal",
+    "directory": "workflow-lab/variants/v001",
+    "role": "optimizer",
+    "candidate_type": "fork_variant",
+    "base_workflow": "vliw-sparse-mask-search",
+    "experimental": true,
+    "topology": "iterative",
+    "method_category": "search",
+    "fidelity_boundary": "experimental_variant",
+    "description": "Landability-gated JOINT full-space simulated annealing over the D3_GATHER_MASK x D4_COLD_MASK synergy axis for a Python VLIW list-scheduler kernel (minimizes scheduled cycle count; arithmetic-identity-preserving by construction via mux<->gather / gather<->vload rerouting only).",
+    "when_to_use": "When optimizing a Python VLIW list-scheduler kernel whose objective is scheduled cycle count, the live lever is the joint D3_GATHER_MASK x D4_COLD_MASK search (d3-alone -4, d4-alone -18, both -32 on the load engine), and the base single-position sweep + size-2/3 combo search has stalled at the 1132 local optimum. This variant replaces that sweep+combo method with a two-phase SA (rot-27 oracle collection then full-32 confirm) that co-perturbs both 64-bit masks together, landing only champs that pass the dual landability gate (PSPACE=1 correct AND < best AND PSPACE=0 correct AND <= bound). NOT for GPU/CUDA kernel generation; does NOT modify tests/.",
+    "score": 22,
+    "features": [
+      "eligible base: +10",
+      "optimizer role: +4",
+      "session-local workflow variant: +1",
+      "variant can react to prior stalled/failed evidence: +2",
+      "exact language compatibility: +4",
+      "exact backend compatibility: +2",
+      "experimental session-local variant: -1"
+    ],
+    "demoted": false,
+    "demotion_reasons": []
+  },
+  "filter_dead_end": null,
+  "seed_mismatch": null,
+  "routing": {
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "decided_by": "model",
+    "fallback_pick": "vliw-d3d4-joint-anneal",
+    "rationale": "Round-0 transfer item fs-1 (avoid directive, evidence=user_provided) states the base single-position sweep + size-2/3 combo search over the d3 mask stalls at the 1132 local optimum, and that the 1120 champion required FULL-SPACE simulated annealing spanning both d3 rounds. The base vliw-sparse-mask-search implements exactly that stalled sweep+combo method, so re-picking the base would re-run a transfer-marked failed_strategy. The newly registered vliw-d3d4-joint-anneal variant is a fork of that base whose description replaces sweep+combo with two-phase SA (rot-27 oracle collection then full-32 confirm) that co-perturbs D3_GATHER_MASK and D4_COLD_MASK together — precisely the method fs-1 says is required, on the exact masks fs-1 says to search. bn-1 (explore directive) further specifies the live axis is the JOINT D3_GATHER_MASK x D4_COLD_MASK search with synergy on the load engine (d3-alone -4, d4-alone -18, both -32); the variant's when_to_use names this joint d3×d4 axis verbatim, and it targets the profile's load-binding bottleneck (load ~2086 / floor 1043.0 in kernel-profile.md) that the d3×d4 load-engine synergy attacks. sc-1 (constrain directive) mandates a hard dual landability gate (full-32 PSPACE=1 < best AND PSPACE=0 <= bound) and rot-27-then-full-confirm discipline; the variant's when_to_use encodes exactly this dual PSPACE gate. vw-1 (reuse directive) provides the 1120 champion masks to seed any SA from, which the variant can consume directly. No prior measured run exists (round 1, no analysis.json), no escape-consult, no plateau signal to contradict. The variant is the only eligible candidate (all 30+ other catalog entries vetoed on language=python / backend=python / problem_type, including the base vliw-sparse-mask-search which is itself vetoed as 'not in workflows_filter' this round), and it is the purpose-built method for this exact axis — the prior routing's low-confidence 'right levers, contraindicated method' caveat on the base is now resolved because the variant swaps the method to full-space joint SA while keeping the on-axis d3×d4 levers."
+  },
+  "attempt_plan": {
+    "schema_version": 1,
+    "round": 1,
+    "status": "committed",
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "fallback_workflow": "vliw-d3d4-joint-anneal",
+    "commit": {
+      "status": "committed",
+      "workflow": "vliw-d3d4-joint-anneal",
+      "decided_by": "model",
+      "rationale": "Round-0 transfer item fs-1 (avoid directive, evidence=user_provided) states the base single-position sweep + size-2/3 combo search over the d3 mask stalls at the 1132 local optimum, and that the 1120 champion required FULL-SPACE simulated annealing spanning both d3 rounds. The base vliw-sparse-mask-search implements exactly that stalled sweep+combo method, so re-picking the base would re-run a transfer-marked failed_strategy. The newly registered vliw-d3d4-joint-anneal variant is a fork of that base whose description replaces sweep+combo with two-phase SA (rot-27 oracle collection then full-32 confirm) that co-perturbs D3_GATHER_MASK and D4_COLD_MASK together — precisely the method fs-1 says is required, on the exact masks fs-1 says to search. bn-1 (explore directive) further specifies the live axis is the JOINT D3_GATHER_MASK x D4_COLD_MASK search with synergy on the load engine (d3-alone -4, d4-alone -18, both -32); the variant's when_to_use names this joint d3×d4 axis verbatim, and it targets the profile's load-binding bottleneck (load ~2086 / floor 1043.0 in kernel-profile.md) that the d3×d4 load-engine synergy attacks. sc-1 (constrain directive) mandates a hard dual landability gate (full-32 PSPACE=1 < best AND PSPACE=0 <= bound) and rot-27-then-full-confirm discipline; the variant's when_to_use encodes exactly this dual PSPACE gate. vw-1 (reuse directive) provides the 1120 champion masks to seed any SA from, which the variant can consume directly. No prior measured run exists (round 1, no analysis.json), no escape-consult, no plateau signal to contradict. The variant is the only eligible candidate (all 30+ other catalog entries vetoed on language=python / backend=python / problem_type, including the base vliw-sparse-mask-search which is itself vetoed as 'not in workflows_filter' this round), and it is the purpose-built method for this exact axis — the prior routing's low-confidence 'right levers, contraindicated method' caveat on the base is now resolved because the variant swaps the method to full-space joint SA while keeping the on-axis d3×d4 levers."
+    },
+    "evidence_signals": {
+      "transfer_file": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/round-0-transfer.json",
+      "prior_failed_strategy": true,
+      "prior_measured_bottleneck": false,
+      "prior_plateau": false,
+      "target_speedup": "1.134",
+      "warnings": []
+    },
+    "selection_policy": {
+      "deterministic_selector": "/home/qinhaiyan/KerSor/scripts/select-workflow.sh",
+      "scoring": "additive score over hard-veto survivors",
+      "sort_key": "demoted asc, score desc, name asc",
+      "model_can_override": true,
+      "demotion_override_required": true
+    },
+    "candidate_plans": [
+      {
+        "workflow": "vliw-d3d4-joint-anneal",
+        "role": "optimizer",
+        "candidate_type": "fork_variant",
+        "score": 22,
+        "demoted": false,
+        "demotion_reasons": [],
+        "rationale_features": [
+          "eligible base: +10",
+          "optimizer role: +4",
+          "session-local workflow variant: +1",
+          "variant can react to prior stalled/failed evidence: +2",
+          "exact language compatibility: +4",
+          "exact backend compatibility: +2",
+          "experimental session-local variant: -1"
+        ]
+      }
+    ]
+  },
+  "profile_features": {
+    "input_mode": "kernel_file",
+    "language": "python",
+    "backend": "python",
+    "operation_type": "VLIW list-scheduler kernel (Python emitter + greedy scheduler)",
+    "ncu_available": "unknown",
+    "has_harness": "unknown",
+    "in_git_repo": "true",
+    "bottleneck": "",
+    "complexity": "",
+    "design_space": "",
+    "shape_stability": "",
+    "problem_type": "python-kernel-optimization"
+  },
+  "scoring_rubric": "deterministic additive score over hard-veto survivors. Heuristic failures (already-selected, max_kernel_lines, diagnostic-role) demote rather than drop: demoted candidates stay in the list (demoted=true, demotion_reasons[]) but sort last so the deterministic fallback never picks one. The model may pick a demoted candidate only with an override_demotion rationale (see routing.decided_by).",
+  "candidates": [
+    {
+      "name": "vliw-d3d4-joint-anneal",
+      "directory": "workflow-lab/variants/v001",
+      "role": "optimizer",
+      "candidate_type": "fork_variant",
+      "base_workflow": "vliw-sparse-mask-search",
+      "experimental": true,
+      "topology": "iterative",
+      "method_category": "search",
+      "fidelity_boundary": "experimental_variant",
+      "description": "Landability-gated JOINT full-space simulated annealing over the D3_GATHER_MASK x D4_COLD_MASK synergy axis for a Python VLIW list-scheduler kernel (minimizes scheduled cycle count; arithmetic-identity-preserving by construction via mux<->gather / gather<->vload rerouting only).",
+      "when_to_use": "When optimizing a Python VLIW list-scheduler kernel whose objective is scheduled cycle count, the live lever is the joint D3_GATHER_MASK x D4_COLD_MASK search (d3-alone -4, d4-alone -18, both -32 on the load engine), and the base single-position sweep + size-2/3 combo search has stalled at the 1132 local optimum. This variant replaces that sweep+combo method with a two-phase SA (rot-27 oracle collection then full-32 confirm) that co-perturbs both 64-bit masks together, landing only champs that pass the dual landability gate (PSPACE=1 correct AND < best AND PSPACE=0 correct AND <= bound). NOT for GPU/CUDA kernel generation; does NOT modify tests/.",
+      "score": 22,
+      "features": [
+        "eligible base: +10",
+        "optimizer role: +4",
+        "session-local workflow variant: +1",
+        "variant can react to prior stalled/failed evidence: +2",
+        "exact language compatibility: +4",
+        "exact backend compatibility: +2",
+        "experimental session-local variant: -1"
+      ],
+      "demoted": false,
+      "demotion_reasons": []
+    }
+  ],
+  "rejected": [
+    {
+      "name": "ako4x-kernel-optimizer",
+      "directory": "AKO4X",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python"
+      ]
+    },
+    {
+      "name": "argus-kernel-optimization",
+      "directory": "ARGUS",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "accelopt-kernel-optimization",
+      "directory": "AccelOpt",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,cuda-kernel-generation]"
+      ]
+    },
+    {
+      "name": "adaexplore-kernel-optimization",
+      "directory": "AdaExplore",
+      "reasons": [
+        "not in workflows_filter",
+        "known_broken: uses_forbidden_runtime_api: Math.random()",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[triton-kernel-optimization,triton-kernel-generation]"
+      ]
+    },
+    {
+      "name": "ascendc-kernel-optimization",
+      "directory": "AscendC",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[ascend-kernel-optimization,ascend-kernel-generation]"
+      ]
+    },
+    {
+      "name": "astra-kernel-optimization",
+      "directory": "Astra",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "automegakernel-megakernel-optimization",
+      "directory": "AutoMegaKernel",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[amk-schedule-search,megakernel-synthesis,llama-megakernel-optimization]"
+      ]
+    },
+    {
+      "name": "cuda-agent-kernel-optimization",
+      "directory": "CUDAAgent",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "cudallm-fsr-kernel-generation",
+      "directory": "CUDALLM",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-generation,cuda-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "cutlass-gemm-optimization",
+      "directory": "CutlassGEMM",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cutlass-gemm-optimization]"
+      ]
+    },
+    {
+      "name": "fact-kernel-optimization",
+      "directory": "FACT",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "gpuforecasters-kernel-optimization",
+      "directory": "GPUForecasters",
+      "reasons": [
+        "not in workflows_filter",
+        "known_broken: Script bug: 'meta is not defined' at runtime (reproduced on AMD-395 20260612-195934 run-4). Also reported ML-simulated speedups without compiling. Unblock after fixing the meta reference and enforcing real compile+correctness gating.",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "gemmptx-gemm-optimization",
+      "directory": "GemmPTX",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[gemm-ptx-optimization,cuda-gemm-ptx-optimization,gemm-instruction-optimization]"
+      ]
+    },
+    {
+      "name": "generalist-kernel-optimization",
+      "directory": "Generalist",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-generation,cuda-kernel-optimization,ascend-kernel-generation,ascend-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "in-place-patch-optimization",
+      "directory": "InPlacePatch",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "kda-kernel-workflow",
+      "directory": "KDA",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,cuda-kernel-generation,ascend-kernel-optimization,ascend-kernel-generation]"
+      ]
+    },
+    {
+      "name": "keet-kernel-explanation",
+      "directory": "KEET",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[performance-explanation]"
+      ]
+    },
+    {
+      "name": "ksearch-kernel-optimization",
+      "directory": "KSearch",
+      "reasons": [
+        "not in workflows_filter",
+        "known_broken: uses_forbidden_runtime_api: Date.now()",
+        "language mismatch: kernel=python"
+      ]
+    },
+    {
+      "name": "kernelagent-triton-synthesis",
+      "directory": "KernelAgent",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[triton-kernel-generation,operator-generation]"
+      ]
+    },
+    {
+      "name": "kernelband-kernel-optimization",
+      "directory": "KernelBand",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python"
+      ]
+    },
+    {
+      "name": "kernelblaster-kernel-optimization",
+      "directory": "KernelBlaster",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "kernelfoundry-kernel-optimization",
+      "directory": "KernelFoundry",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python"
+      ]
+    },
+    {
+      "name": "kernelfoundrydx-kernel-optimization",
+      "directory": "KernelFoundryDx",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[triton-kernel-optimization,triton-kernel-generation]"
+      ]
+    },
+    {
+      "name": "kernelskill-kernel-optimization",
+      "directory": "KernelSkill",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,cuda-kernel-generation]"
+      ]
+    },
+    {
+      "name": "llamacpp-embedded-search",
+      "directory": "LlamacppEmbeddedSearch",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "llamacpp-metal-embedded-search",
+      "directory": "LlamacppEmbeddedSearch",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "regrapht-kernel-optimization",
+      "directory": "ReGraphT",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,kernel-search]"
+      ]
+    },
+    {
+      "name": "stark-kernel-optimization",
+      "directory": "STARK",
+      "reasons": [
+        "not in workflows_filter",
+        "known_broken: uses_forbidden_runtime_api: Math.random()",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,kernel-search]"
+      ]
+    },
+    {
+      "name": "stitchcuda-kernel-optimization",
+      "directory": "StitchCUDA",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-generation,cuda-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "tritorx-operator-generation",
+      "directory": "TritorX",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[aten-triton-operator-generation,operator-generation]"
+      ]
+    },
+    {
+      "name": "warpspeed-kernel-search",
+      "directory": "WarpSpeed",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization,kernel-search]"
+      ]
+    },
+    {
+      "name": "xe-forge-kernel-optimization",
+      "directory": "Xe-Forge",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[xpu-kernel-optimization,triton-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "cupilot-kernel-optimization",
+      "directory": "cuPilot",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python",
+        "problem_type mismatch: derived=[python-kernel-optimization,gpu-kernel-optimization,kernel-optimization], workflow accepts=[cuda-kernel-optimization]"
+      ]
+    },
+    {
+      "name": "shape-specialization-kernel-optimization",
+      "directory": "shape-specialization-kernel-optimization",
+      "reasons": [
+        "not in workflows_filter",
+        "language mismatch: kernel=python",
+        "backend mismatch: backend=python"
+      ]
+    },
+    {
+      "name": "vliw-anneal-optimizer",
+      "directory": "vliw-anneal-optimizer",
+      "reasons": [
+        "not in workflows_filter"
+      ]
+    },
+    {
+      "name": "vliw-sparse-mask-search",
+      "directory": "vliw-sparse-mask-search",
+      "reasons": [
+        "not in workflows_filter"
+      ]
+    }
+  ]
+}

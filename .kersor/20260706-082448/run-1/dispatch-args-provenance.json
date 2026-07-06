@@ -1,0 +1,23 @@
+{
+  "workflow": "vliw-d3d4-joint-anneal",
+  "run_dir": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/run-1",
+  "missing_required": [],
+  "unmet_note_requirements": [],
+  "auto_dispatch": true,
+  "args": {
+    "project_root": {"value": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint", "source": "session_worktree_root", "note": "required arg; the worktree being optimized (kernel_path parent). Trivially inferable under yolo."},
+    "exp_dir": {"value": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/run-1", "source": "resolver"},
+    "iters": {"value": 2500, "source": "workflow_default"},
+    "restarts": {"value": 3, "source": "workflow_default"},
+    "seed": {"value": 42, "source": "workflow_default"},
+    "best_known": {"value": 1120, "source": "state.md/spec baseline_ms", "note": "current global best PSPACE=1 gate"},
+    "pspace0_bound": {"value": 1187, "source": "spec constraint", "note": "PSPACE=0 must stay <= 1187 (now 1180)"},
+    "collect": {"value": 1128, "source": "workflow_default", "note": "collect distinct masks with oracle <= this (oracle is strict upper bound on full-32)"},
+    "topk": {"value": 50, "source": "workflow_default"},
+    "model_mechanical": {"value": "haiku", "source": "workflow_default"},
+    "model_judgment": {"value": "sonnet", "source": "workflow_default"}
+  },
+  "handoff_injected": false,
+  "handoff_note": "This workflow has no op_description/problem_description/kernel_spec semantic field; inputs are structural paths only. Handoff (round-0 priors) rendered to run-1/handoff.txt and reflected in the driver's built-in seed masks + dual gate. User guidance from spec is encoded in best_known/pspace0_bound.",
+  "provenance_author": "orchestrator (hand-synthesized: workflow inputs are all structural paths, no free-text semantic field for the dispatch-arg-synthesizer to inject into)"
+}

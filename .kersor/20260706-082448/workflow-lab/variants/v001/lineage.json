@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "variant_id": "v001",
+  "variant_name": "vliw-d3d4-joint-anneal",
+  "base_workflow": "vliw-sparse-mask-search",
+  "source_workflow_path": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/workflow-lab/proposals/round-1/workflow.js",
+  "reason": "sweep+combo stalls at 1132 local opt (fit-judge low); joint full-space SA co-perturbs D3xD4 masks to capture -32 synergy toward <1120",
+  "created_at": "2026-07-06T08:36:54+08:00"
+}

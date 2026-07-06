@@ -1,0 +1,13 @@
+{
+  "project_root": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint",
+  "exp_dir": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/run-1",
+  "iters": 2500,
+  "restarts": 3,
+  "seed": 42,
+  "best_known": 1120,
+  "pspace0_bound": 1187,
+  "collect": 1128,
+  "topk": 50,
+  "model_mechanical": "haiku",
+  "model_judgment": "sonnet"
+}

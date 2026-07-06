@@ -1,0 +1,2 @@
+{"event":"dispatch_start","ts":"2026-07-06T00:42:18Z","round":1,"run_token":"539639e739b1a340","scriptPath":"/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/workflow-lab/variants/v001/workflow.js","args_hash":"1858870239c1c179"}
+{"event":"dispatch_end","ts":"2026-07-06T00:42:18Z","round":1,"run_token":"539639e739b1a340","output_hash":"fa5e41f9b703071f","status":"completed","scriptPath":"/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448/workflow-lab/variants/v001/workflow.js"}

@@ -1,0 +1,9 @@
+{
+  "grounded": true,
+  "baseline_cycles": 1120,
+  "target_cycles": 1000,
+  "realistic_speedup": 1.134,
+  "ceiling_cycles": 814,
+  "ceiling_note": "D4_FREE k=64; sparse D4 landed 1134; #27 after load<1036.7",
+  "binding_engine": "load"
+}

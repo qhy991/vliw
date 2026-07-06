@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "workflow": "vliw-d3d4-joint-anneal",
+  "compiled": true,
+  "correct": true,
+  "speedup": 1.008100810081008,
+  "metric_name": "cycles",
+  "baseline_id": "merged-floor-1120",
+  "baseline_latency_ms": 1120,
+  "candidate_latency_ms": 1111,
+  "harness_command": "python tests/submission_tests.py && PSPACE=0 python tests/submission_tests.py",
+  "source_path": "run-1/output.json:round_best_speedup",
+  "best_kernel": "{\"d3\":[0,1,2,3,4,34,35,44,45,50,54],\"d4\":[7,12,16,22,24,33,37]}",
+  "has_best_kernel": true,
+  "iterations_completed": 941,
+  "convergence_status": "converged",
+  "infrastructure_failure": false,
+  "bottleneck_class": "load_bound",
+  "insights": [
+    {
+      "id": "ins-1",
+      "kind": "validated_win",
+      "directive": "reuse",
+      "claim": "Joint D3_GATHER_MASK x D4_COLD_MASK full-space SA landed 1120->1111 cycles (PSPACE=1) / 1180 (PSPACE=0): tail-packing win on the load engine with synergy masks d3={0,1,2,3,4,34,35,44,45,50,54} d4={7,12,16,22,24,33,37}. The best mask has highest load (1083.5, near un-masked 1087.5).",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": {
+        "op": "VLIW-scheduler",
+        "shape": "fh10-r16-b256",
+        "dtype": "n/a"
+      }
+    },
+    {
+      "id": "ins-2",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "Load floor (~1083.5) still >> alu sub-floor (1036.7). Best mask at 1111 has the highest load; pushing load down independently hurts realized cycles. Sub-1111 needs a load-floor mover that ALSO improves tail scheduling — not a pure load-cut axis.",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": {
+        "op": "VLIW-scheduler",
+        "shape": "fh10-r16-b256",
+        "dtype": "n/a"
+      },
+      "actionable_hint": "Target the load floor (~1083.5, 47 cycles above alu sub-floor) with an axis that cuts load AND improves scheduler tail simultaneously. Candidate axes: D4_SCRATCH recycler rollup (VLIW-25/VLIW-26) or D4_FREE engine-split (VLIW-20). Pure load-cut axes (VLIW-16 d4-mux, VLIW-23 mem-bake) are NO-GO per established killtests."
+    },
+    {
+      "id": "ins-3",
+      "kind": "search_constraint",
+      "directive": "constrain",
+      "claim": "Hard dual PSPACE gate: PSPACE=1 < best (now 1111), PSPACE=0 <= 1187 (now 1180). rot-27 oracle is a strict upper bound on full-32 realized, usable as cheap search signal. Do not modify tests/.",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": {
+        "op": "VLIW-scheduler",
+        "shape": "fh10-r16-b256",
+        "dtype": "n/a"
+      }
+    }
+  ],
+  "failed_strategies": [],
+  "raw_speedup_field": "overall_speedup",
+  "raw_speedup_value": 1.003584229390681,
+  "attempt_evidence": {
+    "schema_version": 1,
+    "workflow": "vliw-d3d4-joint-anneal",
+    "outcome": {
+      "compiled": true,
+      "correct": true,
+      "convergence_status": "converged"
+    },
+    "metric_contract": {
+      "metric_name": "cycles",
+      "baseline_id": "merged-floor-1120",
+      "baseline_latency_ms": 1120,
+      "candidate_latency_ms": 1111,
+      "harness_command": "python tests/submission_tests.py && PSPACE=0 python tests/submission_tests.py",
+      "source_path": "run-1/output.json:round_best_speedup",
+      "speedup": 1.008100810081008,
+      "speedup_source": "analysis.json:speedup",
+      "valid": true,
+      "timing_method": "e2e"
+    },
+    "artifacts": {
+      "best_kernel": "{\"d3\":[0,1,2,3,4,34,35,44,45,50,54],\"d4\":[7,12,16,22,24,33,37]}",
+      "has_best_kernel": true,
+      "iterations_completed": 941
+    },
+    "transfer_items": [
+      {
+        "id": "ins-1",
+        "kind": "validated_win",
+        "directive": "reuse",
+        "claim": "Joint D3_GATHER_MASK x D4_COLD_MASK full-space SA landed 1120->1111 cycles (PSPACE=1) / 1180 (PSPACE=0): tail-packing win on the load engine with synergy masks d3={0,1,2,3,4,34,35,44,45,50,54} d4={7,12,16,22,24,33,37}. Committed c31f27c, shipped in perf_takehome.py.",
+        "evidence": "benchmark",
+        "confidence": "measured",
+        "scope": {
+          "op": "VLIW-scheduler",
+          "shape": "fh10-r16-b256",
+          "dtype": "n/a"
+        }
+      },
+      {
+        "id": "ins-2",
+        "kind": "bottleneck",
+        "directive": "explore",
+        "claim": "Load floor (~1083.5) still >> alu sub-floor (1036.7). Best mask at 1111 has the highest load; pushing load down independently hurts realized cycles. Sub-1111 needs a load-floor mover that ALSO improves tail scheduling.",
+        "evidence": "benchmark",
+        "confidence": "measured",
+        "scope": {
+          "op": "VLIW-scheduler",
+          "shape": "fh10-r16-b256",
+          "dtype": "n/a"
+        },
+        "actionable_hint": "Target the load floor (~1083.5, 47 cycles above alu sub-floor) with an axis that cuts load AND improves scheduler tail simultaneously. Candidate axes: D4_SCRATCH recycler rollup (VLIW-25/VLIW-26) or D4_FREE engine-split (VLIW-20). Pure load-cut axes (VLIW-16 d4-mux, VLIW-23 mem-bake) are NO-GO per established killtests."
+      },
+      {
+        "id": "ins-3",
+        "kind": "search_constraint",
+        "directive": "constrain",
+        "claim": "Hard dual PSPACE gate: PSPACE=1 < best (now 1111), PSPACE=0 <= 1187 (now 1180). rot-27 oracle is a strict upper bound on full-32 realized, usable as cheap search signal. Do not modify tests/.",
+        "evidence": "benchmark",
+        "confidence": "measured",
+        "scope": {
+          "op": "VLIW-scheduler",
+          "shape": "fh10-r16-b256",
+          "dtype": "n/a"
+        }
+      }
+    ],
+    "partial_wins": [],
+    "notes": "Speedup is a cycle-count ratio (deterministic, lower-is-better). Baseline 1120, round best 1111. The dispatched workflow driver (seed 42) found 1116; the session best 1111 came from a diverse hot-start (seed 1337) run of the same driver, cross-checked and shipped. Both are landable. Metric contract baseline_id matches test-method.md 'Baseline:' field. Metric is deterministic (same mask = same cycle count), so reproduction CV=0 trivially. No regime_breakdown: this is a single-metric VLIW scheduler, not a multi-shape GPU kernel."
+  },
+  "regime_breakdown": null,
+  "partial_wins": [],
+  "notes": "Speedup is a cycle-count ratio (deterministic, lower-is-better). Baseline 1120, round best 1111. The dispatched workflow driver (seed 42) found 1116; the session best 1111 came from a diverse hot-start (seed 1337) run of the same driver, cross-checked and shipped. Both are landable. Metric contract baseline_id matches test-method.md 'Baseline:' field. Metric is deterministic (same mask = same cycle count), so reproduction CV=0 trivially. No regime_breakdown: this is a single-metric VLIW scheduler, not a multi-shape GPU kernel."
+}

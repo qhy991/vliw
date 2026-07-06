@@ -1,0 +1,24 @@
+{
+  "fit_confidence": "low",
+  "fits_task": false,
+  "soft_reasons": [
+    {
+      "code": "prior_plateau",
+      "detail": "Round-0 transfer item 2 (avoid, user_provided) records that this workflow's exact method — single-position sweep + anchored size-2/3 combo over the d3 mask — stalls at the 1132 local optimum, and the shipped 1120 champion required full-space simulated annealing (64-bit bit-flip spanning both d3 rounds). Re-running a known-stalling method on the same axis is a measured-prior mismatch."
+    },
+    {
+      "code": "shape_misfit",
+      "detail": "The workflow's topology is parallel_fanout searching d3 and d4 in separate combo agents, but the session thesis (transfer item 1, explore) is d3×d4 SYNERGY: d3-alone -4, d4-alone -18, both -32 — a coupling only a joint co-perturbation of both masks can see. Independent fanout cannot observe the cross-mask interaction that is the entire point of this session."
+    },
+    {
+      "code": "method_underpowered",
+      "detail": "kernel-profile.md names load (floor 1043.0) as the binding engine and the active lever as sparse load-floor search needing ~7 more load cycles; sweep+combo over a benefit window is a local-move heuristic, whereas the design space is a coupled 64-bit joint mask whose champion was only reached by full-space SA — the method's move set is too narrow for the search space shape."
+    }
+  ],
+  "adaptation_suggestions": [
+    "Evolve the workflow's search step from single-position sweep + size-2/3 combo to a JOINT full-space simulated-annealing driver that co-perturbs D3_GATHER_MASK and D4_COLD_MASK bits together (64-bit bit-flip spanning both d3 rounds + d4); the ready driver at experiments/anneal_d3d4_joint.py can be invoked directly rather than rewriting the method.",
+    "Seed the joint SA from the shipped 1120 champion masks named in round-0 transfer item 4 (reuse): D3_GATHER_MASK={0,1,2,3,4,37,39,40,46,54,58}, D4_COLD_MASK={25,26,27,29,31,34} — do not restart from zero.",
+    "Replace the single PSPACE=1 no-regress gate with the dual gate from transfer item 3 (constrain): land only masks with full-32 PSPACE=1 < 1120 AND PSPACE=0 <= 1187, using rot-27 oracle (0.33s) as a cheap search signal then full-confirm; do not modify tests/.",
+    "Collapse the parallel_fanout d3-agent / d4-agent split into a single joint agent so the cross-mask synergy term (-32 vs -22 summed singles) is observable to the search; keep the correctness + cycle-count gate as-is."
+  ]
+}

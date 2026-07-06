@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "through_round": 1,
+  "items": [
+    {
+      "id": "ins-1",
+      "kind": "validated_win",
+      "directive": "reuse",
+      "claim": "Joint D3_GATHER_MASK x D4_COLD_MASK full-space SA landed 1120->1111 cycles (PSPACE=1) / 1180 (PSPACE=0): tail-packing win on the load engine with synergy masks d3={0,1,2,3,4,34,35,44,45,50,54} d4={7,12,16,22,24,33,37}. The best mask has highest load (1083.5, near un-masked 1087.5).",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": { "op": "VLIW-scheduler", "shape": "fh10-r16-b256", "dtype": "n/a" },
+      "source_round": 1,
+      "source_workflow": "vliw-d3d4-joint-anneal",
+      "technique": "joint_mask_simulated_annealing",
+      "technique_status": "proposed"
+    },
+    {
+      "id": "ins-2",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "Load floor (~1083.5) still >> alu sub-floor (1036.7). Best mask at 1111 has the highest load; pushing load down independently hurts realized cycles. Sub-1111 needs a load-floor mover that ALSO improves tail scheduling — not a pure load-cut axis.",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": { "op": "VLIW-scheduler", "shape": "fh10-r16-b256", "dtype": "n/a" },
+      "source_round": 1,
+      "source_workflow": "vliw-d3d4-joint-anneal",
+      "actionable_hint": "Target the load floor (~1083.5, 47 cycles above alu sub-floor) with an axis that cuts load AND improves scheduler tail simultaneously. Candidate axes: D4_SCRATCH recycler rollup (VLIW-25/VLIW-26) or D4_FREE engine-split (VLIW-20). Pure load-cut axes (VLIW-16 d4-mux, VLIW-23 mem-bake) are NO-GO per established killtests.",
+      "technique": "load_floor_tail_co_optimization",
+      "technique_status": "proposed"
+    },
+    {
+      "id": "ins-3",
+      "kind": "search_constraint",
+      "directive": "constrain",
+      "claim": "Hard dual PSPACE gate: PSPACE=1 < best (now 1111), PSPACE=0 <= 1187 (now 1180). rot-27 oracle is a strict upper bound on full-32 realized, usable as cheap search signal. Do not modify tests/.",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": { "op": "VLIW-scheduler", "shape": "fh10-r16-b256", "dtype": "n/a" },
+      "source_round": 1,
+      "source_workflow": "vliw-d3d4-joint-anneal"
+    },
+    {
+      "id": "bn-1",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "Joint D3_GATHER_MASK x D4_COLD_MASK is the live axis: d3-alone -4, d4-alone -18, both -32 (synergy on load engine). Search the two masks jointly, not separately.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": { "op": "VLIW-scheduler", "shape": "fh10-r16-b256", "dtype": "n/a" },
+      "source_round": 0,
+      "source_workflow": "user-prior",
+      "technique": "joint_mask_simulated_annealing",
+      "technique_status": "proposed"
+    },
+    {
+      "id": "fs-1",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "Single-position sweep + anchored combo search over d3 mask stalls at the 1132 local optimum. The 1120 champion needs FULL-SPACE simulated annealing (64-bit bit-flip spanning both d3 rounds). prefix-k on d3/d4 is NO-GO.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": { "op": "VLIW-scheduler", "shape": "fh10-r16-b256", "dtype": "n/a" },
+      "source_round": 0,
+      "source_workflow": "user-prior",
+      "actionable_hint": "Use full-space joint SA co-perturbing both masks; do not re-run positional sweep or prefix-k search.",
+      "technique": "positional_sweep_combo_search",
+      "technique_status": "proposed"
+    }
+  ]
+}

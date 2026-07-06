@@ -1,0 +1,27 @@
+{
+  "best_full1": 1116,
+  "best_full0": 1178,
+  "d3": [
+    1,
+    2,
+    33,
+    41,
+    44,
+    51,
+    58
+  ],
+  "d4": [
+    9,
+    11,
+    12,
+    20,
+    24,
+    26,
+    31
+  ],
+  "seed_full1": 1120,
+  "seed_full0": 1180,
+  "n_collected": 675,
+  "n_confirmed": 50,
+  "verdict": "IMPROVED past 1120"
+}

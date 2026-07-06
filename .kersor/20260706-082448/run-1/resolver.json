@@ -1,0 +1,18 @@
+{
+  "workflow": "vliw-d3d4-joint-anneal",
+  "resolved": {
+    "exp_dir": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/.kersor/20260706-082448",
+    "model_mechanical": "sonnet"
+  },
+  "inferred_from": {
+    "exp_dir": "session_dir",
+    "model_mechanical": "default(sonnet)"
+  },
+  "missing_required": [
+    "project_root"
+  ],
+  "must_ask": [
+    "project_root"
+  ],
+  "auto_dispatch": false
+}

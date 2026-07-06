@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "variants": [
+    {
+      "variant_id": "v001",
+      "name": "vliw-d3d4-joint-anneal",
+      "base_workflow": "vliw-sparse-mask-search",
+      "variant_dir": ".kersor/20260706-082448/workflow-lab/variants/v001",
+      "reason": "sweep+combo stalls at 1132 local opt (fit-judge low); joint full-space SA co-perturbs D3xD4 masks to capture -32 synergy toward <1120"
+    }
+  ]
+}

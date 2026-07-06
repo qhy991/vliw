@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "round": 1,
+  "chosen_workflow": "vliw-d3d4-joint-anneal",
+  "phase_intent": "optimize",
+  "rationale": "Round-0 transfer item fs-1 (avoid directive, evidence=user_provided) states the base single-position sweep + size-2/3 combo search over the d3 mask stalls at the 1132 local optimum, and that the 1120 champion required FULL-SPACE simulated annealing spanning both d3 rounds. The base vliw-sparse-mask-search implements exactly that stalled sweep+combo method, so re-picking the base would re-run a transfer-marked failed_strategy. The newly registered vliw-d3d4-joint-anneal variant is a fork of that base whose description replaces sweep+combo with two-phase SA (rot-27 oracle collection then full-32 confirm) that co-perturbs D3_GATHER_MASK and D4_COLD_MASK together — precisely the method fs-1 says is required, on the exact masks fs-1 says to search. bn-1 (explore directive) further specifies the live axis is the JOINT D3_GATHER_MASK x D4_COLD_MASK search with synergy on the load engine (d3-alone -4, d4-alone -18, both -32); the variant's when_to_use names this joint d3×d4 axis verbatim, and it targets the profile's load-binding bottleneck (load ~2086 / floor 1043.0 in kernel-profile.md) that the d3×d4 load-engine synergy attacks. sc-1 (constrain directive) mandates a hard dual landability gate (full-32 PSPACE=1 < best AND PSPACE=0 <= bound) and rot-27-then-full-confirm discipline; the variant's when_to_use encodes exactly this dual PSPACE gate. vw-1 (reuse directive) provides the 1120 champion masks to seed any SA from, which the variant can consume directly. No prior measured run exists (round 1, no analysis.json), no escape-consult, no plateau signal to contradict. The variant is the only eligible candidate (all 30+ other catalog entries vetoed on language=python / backend=python / problem_type, including the base vliw-sparse-mask-search which is itself vetoed as 'not in workflows_filter' this round), and it is the purpose-built method for this exact axis — the prior routing's low-confidence 'right levers, contraindicated method' caveat on the base is now resolved because the variant swaps the method to full-space joint SA while keeping the on-axis d3×d4 levers.",
+  "override_demotion": "",
+  "considered": [
+    {
+      "name": "vliw-d3d4-joint-anneal",
+      "verdict": "chosen",
+      "rank": 1,
+      "confidence_bucket": "high",
+      "why": "Only eligible survivor AND a strong functional fit, not a forced pick: its full-space joint-SA method is exactly what transfer fs-1 (avoid) says the 1120 champion required (base sweep+combo stalls at 1132), it targets the bn-1 (explore) joint d3×d4 load-engine synergy axis by name, and it encodes the sc-1 (constrain) dual PSPACE landability gate. The profile's load-binding floor is precisely the bottleneck this axis attacks. Right levers AND right method — the prior round's 'contraindicated method' caveat on the base is resolved by this variant."
+    }
+  ]
+}

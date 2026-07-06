@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "spec": "/mnt/user_dir/shihaichao/qinhaiyan/vliw-v120-d3d4-joint/kersor/kersor-spec.md",
+  "verdict": "pass",
+  "claimed_status": "VERIFIED",
+  "computed_status": "VERIFIED",
+  "checks": [
+    {
+      "id": "structural.blocks",
+      "tier": "structural",
+      "status": "ok",
+      "detail": "all required blocks present"
+    },
+    {
+      "id": "coherence.kernel_profile",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "kernel-profile.md present"
+    },
+    {
+      "id": "coherence.baseline_id_matches",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "baseline_id consistent"
+    },
+    {
+      "id": "coherence.sota_baseline",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "baseline_id aligned with SOTA policy"
+    },
+    {
+      "id": "coherence.timing_method",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "timing_method ok"
+    },
+    {
+      "id": "coherence.metric_contract_pytest_wall",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "metric_contract / pytest-wall policy ok"
+    },
+    {
+      "id": "coherence.min_runs",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "min_runs ok"
+    },
+    {
+      "id": "coherence.kernel_path",
+      "tier": "coherence",
+      "status": "ok",
+      "detail": "kernel_path ok"
+    },
+    {
+      "id": "status-honesty.witness",
+      "tier": "status-honesty",
+      "status": "ok",
+      "detail": "status claim backed (computed=VERIFIED)"
+    }
+  ]
+}

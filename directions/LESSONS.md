@@ -21,6 +21,24 @@ do not re-burn worktrees. Every entry has a reproducible probe or committed
 NO-GO doc. **Re-open a killed direction only when its stated resurrection
 condition is met.**
 
+## LANDED (gated) @ 1111 — O3 axis b0-carry alu elimination (2026-07-06)
+- Branch `explore/v111-alu-cut`, commit 1fde6c7, env **`B0_CARRY=1`** (default OFF).
+- **Scratch-free** elimination of the depth-2/3 `b0=idx&1` extract: b0(p_cur) ==
+  rem of the predecessor's traverse, already live in the per-vector `addr` reg
+  (rem_x, since predecessors always defer). Key the b0-vselects on addr with
+  swapped branches. Unlike killed #22 (needed 768w rem-ring), b0's carry is 1
+  round deep → 0 scratch.
+- Measured full-32: **alu 1036.7→972.0, F 1028.9→1013.3**, valu 1027→1024,
+  load/flow unchanged. Orthogonality PASS (pure elimination, no engine rises).
+  Bit-exact (parity 0, submission OK PSPACE=1 1118 / PSPACE=0 1180).
+- **Default OFF**: alu is a 47c sub-floor @1111 AND extracts double as tail-pack
+  filler → removing them **regresses** realized (1111→1118). Real **−29c** on a
+  load-cut graph (1102→1073). STACKABLE: enable after O1 drops load < alu wall.
+  Stacking cap ~12.7c alone (next wall valu 1024 → needs O2). Doc: `36-O3-alu-cut.md`.
+- **O3 internal NO-GO**: hash-XOR combines (836c) irreducible (bijective xorshift,
+  full bit-liveness — matches #19a); `hi=(1<p)` no scratch-free carry (truth ≠
+  bit1 for p≥4); `val^node` mix fundamental.
+
 ---
 
 ## 1. Binding engine rules (read before any op-count change)

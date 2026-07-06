@@ -487,6 +487,24 @@ class KernelBuilder:
         self._d4_no = 0
         self._node_pool_groups = int(_os.environ.get("NODE_POOL_G", "0"))
         self._node_pool = []
+        # O3 axis (alu-cut): b0-carry extract ELIMINATION. At a depth-2/3 mux
+        # round the low bit `b0 = idx & 1` is not a fresh computation -- by the
+        # p-space traverse p_next = 2*p_prev + rem, so b0(p) == rem of the
+        # immediately-preceding round's traverse. Every depth-2/3 round is
+        # enter_x (predecessor always defers), so that predecessor left
+        # rem_x = rem_true ^ 1 in the per-vector `addr` register and nothing
+        # overwrites addr before the node-select. So the `&` extract is a
+        # provably redundant recompute: drop it and key the b0-vselects on the
+        # carried rem_x with SWAPPED branch args (rem_x == b0 ^ 1). Scratch-free
+        # (uses the live addr reg, unlike #22's 768w rem-ring), alu-only (no
+        # other engine rises -> orthogonal), arithmetic-identical. Eliminates
+        # the b0 `&` at both depth-2 and depth-3 (256 vec-instances, -2048 alu
+        # ops): alu floor 1036.7 -> 972.0, F 1028.9 -> 1013.3 (measured full-32).
+        # Default OFF: alu is a 47c SUB-floor at 1111 and these ops double as
+        # tail-packing filler, so removing them REGRESSES realized on this graph
+        # (1111 -> 1118). This is a STACKABLE lever for after O1 drops load below
+        # the alu wall (on a load-cut graph it is a real win: 1102 -> 1073).
+        self._b0_carry = int(_os.environ.get("B0_CARRY", "0"))
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
         # CONST_FLOW_MASK env plumbing (annealer champ injection, no code edit):
@@ -820,14 +838,29 @@ class KernelBuilder:
                 # node = tree[3+p]; branch order swapped vs idx-space because the
                 # low tree index (3) is odd, so p-even -> odd tree slot.
                 # p=0->tree3, p=1->tree4, p=2->tree5, p=3->tree6.
-                self.v_alu_ex("&", node, idx, one_v)          # podd = p & 1 -> node
-                self.v_alu_ex("<", addr, one_v, idx)          # hi = (1 < p) -> addr
-                self.op("flow", ("vselect", mtmp, node, c["nb4"], c["nb3"]),
-                        reads=set(self.lanes(node)) | set(self.lanes(c["nb4"])) | set(self.lanes(c["nb3"])),
-                        writes=self.lanes(mtmp))            # inner_lo (nb4 if podd else nb3)
-                self.op("flow", ("vselect", node, node, c["nb6"], c["nb5"]),
-                        reads=set(self.lanes(node)) | set(self.lanes(c["nb6"])) | set(self.lanes(c["nb5"])),
-                        writes=self.lanes(node))            # inner_hi (nb6 if podd else nb5)
+                # O3 b0-carry: depth-2 is always enter_x, so the predecessor
+                # (depth-1) deferred and left rem_x = podd^1 in `addr`. podd ==
+                # p&1 == rem_x^1, so the two podd-vselects can key on the live
+                # addr (rem_x) with SWAPPED branches -- skipping the `&` extract.
+                # The `hi = (1<p)` extract must still be computed; emit it into
+                # `addr` AFTER the podd-selects (they've consumed rem_x by then).
+                if self._b0_carry and enter_x:
+                    self.op("flow", ("vselect", mtmp, addr, c["nb3"], c["nb4"]),
+                            reads=set(self.lanes(addr)) | set(self.lanes(c["nb3"])) | set(self.lanes(c["nb4"])),
+                            writes=self.lanes(mtmp))            # inner_lo (nb3 if podd else nb4)
+                    self.op("flow", ("vselect", node, addr, c["nb5"], c["nb6"]),
+                            reads=set(self.lanes(addr)) | set(self.lanes(c["nb5"])) | set(self.lanes(c["nb6"])),
+                            writes=self.lanes(node))            # inner_hi (nb5 if podd else nb6)
+                    self.v_alu_ex("<", addr, one_v, idx)          # hi = (1 < p) -> addr
+                else:
+                    self.v_alu_ex("&", node, idx, one_v)          # podd = p & 1 -> node
+                    self.v_alu_ex("<", addr, one_v, idx)          # hi = (1 < p) -> addr
+                    self.op("flow", ("vselect", mtmp, node, c["nb4"], c["nb3"]),
+                            reads=set(self.lanes(node)) | set(self.lanes(c["nb4"])) | set(self.lanes(c["nb3"])),
+                            writes=self.lanes(mtmp))            # inner_lo (nb4 if podd else nb3)
+                    self.op("flow", ("vselect", node, node, c["nb6"], c["nb5"]),
+                            reads=set(self.lanes(node)) | set(self.lanes(c["nb6"])) | set(self.lanes(c["nb5"])),
+                            writes=self.lanes(node))            # inner_hi (nb6 if podd else nb5)
                 self.op("flow", ("vselect", node, addr, node, mtmp),
                         reads=set(self.lanes(addr)) | set(self.lanes(node)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))            # node = hi ? inner_hi : inner_lo
@@ -860,18 +893,32 @@ class KernelBuilder:
                 mtmp = c[f"mtmp_{g}"]
                 mtmp2 = c[f"mtmp2_{g}"]
                 mtmp3 = c[f"mtmp3_{g}"]
-                self.v_alu_ex("&", addr, idx, one_v)             # b0 = idx & 1 -> addr
-                self.op("flow", ("vselect", mtmp, addr, c["d3_1"], c["d3_0"]),
-                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_1"])) | set(self.lanes(c["d3_0"])),
+                # O3 b0-carry: depth-3 is always enter_x, so the predecessor's
+                # deferred traverse left rem_x = (idx&1)^1 in `addr`, and nothing
+                # has overwritten addr since. b0 == idx&1 == rem_x^1, so we can
+                # skip the `&` extract and key the four b0-vselects on the live
+                # addr with SWAPPED branches (rem_x selects the b0==0 arm). Pure
+                # alu-op elimination; correctness is arithmetic-identical.
+                # p-space only: rem_x carry semantics assume the p-space traverse
+                # (PSPACE=0 uses idx-space rem, different branch order).
+                if self._b0_carry and enter_x and self._pspace:
+                    b0_pairs = ((c["d3_0"], c["d3_1"]), (c["d3_2"], c["d3_3"]),
+                                (c["d3_4"], c["d3_5"]), (c["d3_6"], c["d3_7"]))
+                else:
+                    self.v_alu_ex("&", addr, idx, one_v)         # b0 = idx & 1 -> addr
+                    b0_pairs = ((c["d3_1"], c["d3_0"]), (c["d3_3"], c["d3_2"]),
+                                (c["d3_5"], c["d3_4"]), (c["d3_7"], c["d3_6"]))
+                self.op("flow", ("vselect", mtmp, addr, b0_pairs[0][0], b0_pairs[0][1]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(b0_pairs[0][0])) | set(self.lanes(b0_pairs[0][1])),
                         writes=self.lanes(mtmp))
-                self.op("flow", ("vselect", node, addr, c["d3_3"], c["d3_2"]),
-                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_3"])) | set(self.lanes(c["d3_2"])),
+                self.op("flow", ("vselect", node, addr, b0_pairs[1][0], b0_pairs[1][1]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(b0_pairs[1][0])) | set(self.lanes(b0_pairs[1][1])),
                         writes=self.lanes(node))
-                self.op("flow", ("vselect", mtmp2, addr, c["d3_5"], c["d3_4"]),
-                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_5"])) | set(self.lanes(c["d3_4"])),
+                self.op("flow", ("vselect", mtmp2, addr, b0_pairs[2][0], b0_pairs[2][1]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(b0_pairs[2][0])) | set(self.lanes(b0_pairs[2][1])),
                         writes=self.lanes(mtmp2))
-                self.op("flow", ("vselect", mtmp3, addr, c["d3_7"], c["d3_6"]),
-                        reads=set(self.lanes(addr)) | set(self.lanes(c["d3_7"])) | set(self.lanes(c["d3_6"])),
+                self.op("flow", ("vselect", mtmp3, addr, b0_pairs[3][0], b0_pairs[3][1]),
+                        reads=set(self.lanes(addr)) | set(self.lanes(b0_pairs[3][0])) | set(self.lanes(b0_pairs[3][1])),
                         writes=self.lanes(mtmp3))
                 self.v_alu_ex("&", addr, idx, c["two"])
                 self.op("flow", ("vselect", mtmp, addr, node, mtmp),

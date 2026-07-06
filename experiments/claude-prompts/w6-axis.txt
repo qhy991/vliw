@@ -1,0 +1,25 @@
+你是 Wave-6 @ 1111 探索 agent（正交轴 O3 = alu 计算消除）。
+
+## 基线（已固化，勿动）
+- 分支 `explore/v111-alu-cut`（从 `explore/wave6-1120` @ **1111**）
+- 固定 masks（本轴禁止改）：`D3_GATHER_MASK={0,1,2,3,4,34,35,44,45,50,54}`、`D4_COLD_MASK={7,12,16,22,24,33,37}`
+- 引擎 floor：load 1083.5 BIND, **alu 1036.7**, F 1028.9, valu 1027.0, flow 743, tail 27.5
+- 必读：`directions/35-orthogonal-axes.md`（正交性契约）、`directions/LESSONS.md`
+
+## 本轴唯一目标：真减少 alu 计算总数（降 alu floor）
+alu 现在 1036.7，当 load 被 O1 压下来后 alu 会成为新 bind，必须同步降。alu op 组成：
+`xor^ 10032(836) · and& 1936(161) · less< 472(39)`。
+- `&` / `<` 主要来自 traverse 的 extract（idx&1, idx&2, idx&4, 1<p 等，见 `_emit_vec_round` depth 2/3 与 `v_alu_ex`）。找能**消除**的提取：p-space 下 p 的 bit 提取是否有更省的恒等式？多个 `&` 能否合并？
+- `^ 10032` 是 hash XOR 的 8-lane 标量展开（combine/xor 落 alu 的部分）。真减它需要算法级（减少 XOR 计算本身），**不是**把它搬回 valu（那是 shuffle，会抬 F）。
+
+## 正交性硬契约（每个候选必须满足）
+- 只能减少 **alu op 总数**，**不得把 alu 搬到 valu/flow**（shuffle，抬 F/flow，不可叠加）。
+- 落地前报告 5 引擎 floor 向量 before→after；若别的引擎上升补偿，判定 shuffle，拒绝。
+- 改动局部化、gate 化，便于最后与 O1/O2/O4 env 叠加验证。
+
+## 禁止
+- 不改 tests/；不动 d3/d4/combine/xor/const_flow mask；不做 engine-assignment 搬运；不走 KerSor CUDA workflow。
+
+## Gate
+`CYCLES < 1111` PSPACE=1；`PSPACE=0 <= 1187`；parity 0；algebra ALL-PASS。每个 win 验证后 commit 到本分支。
+提示：alu 是最难的正交轴（hash XOR 总量近固定），优先挖 traverse `&`/`<` 消除；若确认无 elimination 空间，写清 NO-GO 理由。

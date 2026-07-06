@@ -297,9 +297,9 @@ _COMBINE_ALU_EXTRA_32x16 = (1461,)
 # Both are pure scheduling knobs; used only when PSPACE=1.
 _POS_OFFSET_PSPACE_32x16 = [
                             3, 4, 1, 10, 7, 3, 1, 10,
-                            6, 4, 7, 9, 5, 4, 2, 6,
-                            9, 8, 4, 5, 4, 3, 5, 4,
-                            7, 4, 5, 9, 8, 0, 1, 0]
+                            6, 2, 7, 10, 5, 4, 2, 6,
+                            10, 8, 4, 5, 4, 3, 5, 4,
+                            7, 4, 6, 9, 8, 0, 1, 0]
 # explicit valu-combine indices (538 of 1536) in per-rotation emit order
 _COMBINE_VALU_PSPACE_32x16 = (
     0, 1, 2, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19,
@@ -456,7 +456,12 @@ class KernelBuilder:
             _parsed = [] if not _d3gm.strip() else _json_d3gm.loads(_d3gm)
             self._d3_gather_mask = [bool(x) for x in _parsed] or None
         else:
-            _d3champ = (0, 1, 2, 3, 4, 34, 35, 44, 45, 50, 54)
+            # Joint B0_CARRY-aware mask search (2026-07-06): with the redundant
+            # b0 extract removed, the prior 1111 d3/d4 window no longer packs
+            # the tail best. This sparse pair keeps load near the new floor and
+            # lets B0_CARRY realize a net win; the paired offset retune below
+            # takes the stack to 1094 cycles.
+            _d3champ = (0, 1, 37)
             self._d3_gather_mask = [(i in _d3champ) for i in range(64)]
         # #26 d4-gather-cut: replace the first _d4_mux of the 64 depth-4 gather
         # instances (8 scalar loads each) with a 16-way vselect tournament over
@@ -483,7 +488,10 @@ class KernelBuilder:
             if self._d4_cold_mask_disabled:
                 self._d4_cold_mask = None
         elif not self._d4_cold_mask_disabled and self._d4_mux == 0 and self._d4_cold == 0:
-            self._d4_cold_mask = [(i in (7, 12, 16, 22, 24, 33, 37)) for i in range(64)]
+            self._d4_cold_mask = [
+                (i in (6, 7, 9, 16, 21, 23, 24, 25, 29, 32, 35))
+                for i in range(64)
+            ]
         self._d4_no = 0
         # O1 stack probe: delete all depth>=4 node fetches (gather/mux/vload).
         # Output WRONG — schedule-length only (same probe as #20/#27 D4_FREE
@@ -504,11 +512,10 @@ class KernelBuilder:
         # other engine rises -> orthogonal), arithmetic-identical. Eliminates
         # the b0 `&` at both depth-2 and depth-3 (256 vec-instances, -2048 alu
         # ops): alu floor 1036.7 -> 972.0, F 1028.9 -> 1013.3 (measured full-32).
-        # Default OFF: alu is a 47c SUB-floor at 1111 and these ops double as
-        # tail-packing filler, so removing them REGRESSES realized on this graph
-        # (1111 -> 1118). This is a STACKABLE lever for after O1 drops load below
-        # the alu wall (on a load-cut graph it is a real win: 1102 -> 1073).
-        self._b0_carry = int(_os.environ.get("B0_CARRY", "0"))
+        # Default ON after the B0-aware d3/d4 mask + offset retune above. B0
+        # alone regresses on the old 1111 graph because these extracts were
+        # tail-packing filler, but with the new sparse masks it is a net win.
+        self._b0_carry = int(_os.environ.get("B0_CARRY", "1"))
         self._combine_head = int(_os.environ.get("COMBINE_HEAD", self._combine_head))
         self._combine_tail = int(_os.environ.get("COMBINE_TAIL", self._combine_tail))
         # CONST_FLOW_MASK env plumbing (annealer champ injection, no code edit):

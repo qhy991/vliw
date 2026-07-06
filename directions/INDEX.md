@@ -1,6 +1,6 @@
-# VLIW Kernel Optimization — Direction Index (@ 1151)
+# VLIW Kernel Optimization — Direction Index (@ 1094)
 
-**Global best:** `explore/merged-floor` @ **1151 cycles** (128.35×), verified `tests/submission_tests.py`.
+**Global best:** `explore/wave6-1111` @ **1094 cycles** (135.04×), verified `tests/submission_tests.py`.
 
 **Do-not-repeat registry:** [`LESSONS.md`](LESSONS.md) — read before opening any worktree.
 
@@ -8,17 +8,19 @@ Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.
 
 ---
 
-## Engine profile @ 1152 (PSPACE=1)
+## Engine profile @ 1094 (PSPACE=1)
 
 ```
-load  2129  floor 1064.5  ← BINDING
-alu  12440  floor 1036.7
-valu  6017  floor 1002.8
-flow    716  floor  716.0
-realized 1152 | tail gap ~88 (intrinsic load-idle in windup/drain until floor drops)
+load  2071  floor 1035.5
+valu  6189  floor 1031.5
+F = (8*valu + alu)/60 = 1025.1
+alu  11992  floor  999.3
+flow   859  floor  859.0
+realized 1094 | tail gap ~58.5 over max floor
 ```
 
-**D4_FREE probe (theoretical):** delete all d4 gathers → **1088**, alu binds.
+**Wrong-output lower bound:** `GATHER_FREE=1` schedules at **993**, but this skips
+real node fetches and is not a valid optimization.
 
 ---
 
@@ -34,12 +36,31 @@ realized 1152 | tail gap ~88 (intrinsic load-idle in windup/drain until floor dr
 | 18 | micro purges | 1156 |
 | 28 | const→flow rebalance | **1152** |
 | 30 | const→flow per-instance mask (KerSor variant-r1) | **1151** |
+| W6-C | joint sparse d3×d4 mask | **1111** |
+| W7 seed | B0_CARRY + d3/d4 mask + offset retune | **1094** |
 
 Full detail: [`RESULT.md`](../RESULT.md).
 
 ---
 
-## Active directions — Wave-3 (sub-1000 path)
+## Active directions — Wave-7 (sub-1000 path)
+
+| Priority | Direction | Worktree | Status |
+|---|---|---|---|
+| 1 | Deep gather representation | `explore/w7-a-deep-gather` | Open; see [`39-wave7-kersor-1094.md`](39-wave7-kersor-1094.md) |
+| 2 | Traverse/hash structural deletion | `explore/w7-b-traverse-structure` | Open |
+| 3 | Multi-rot tail and mask retune | `explore/w7-c-tail-retune` | Open; lower expected payoff without a structural cut |
+| 4 | Scheduler objective/search infra | `explore/w7-d-scheduler-objective` | Open; support lane |
+
+Create worktrees with:
+
+```bash
+scripts/setup-wave7-kersor-worktrees.sh
+```
+
+---
+
+## Closed / parked directions
 
 | Priority | # | Direction | Worktree | Status |
 |---|---|---|---|---|
@@ -73,6 +94,7 @@ Details: [`LESSONS.md`](LESSONS.md).
 
 ```bash
 python parity_check.py && python algebra_check_ported.py
-python tests/submission_tests.py   # OK, CYCLES <= 1151
-PSPACE=0 python tests/submission_tests.py   # OK, CYCLES <= 1187
+python tests/submission_tests.py   # OK, CYCLES <= 1094
+PSPACE=0 python tests/submission_tests.py   # OK, CYCLES <= 1184
+git diff -- tests/                 # must be empty
 ```

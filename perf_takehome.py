@@ -485,6 +485,10 @@ class KernelBuilder:
         elif not self._d4_cold_mask_disabled and self._d4_mux == 0 and self._d4_cold == 0:
             self._d4_cold_mask = [(i in (7, 12, 16, 22, 24, 33, 37)) for i in range(64)]
         self._d4_no = 0
+        # O1 stack probe: delete all depth>=4 node fetches (gather/mux/vload).
+        # Output WRONG — schedule-length only (same probe as #20/#27 D4_FREE
+        # extended to depths 5-10). Use experiments/probe_o1o3_stack.py.
+        self._gather_free = int(_os.environ.get("GATHER_FREE", "0"))
         self._node_pool_groups = int(_os.environ.get("NODE_POOL_G", "0"))
         self._node_pool = []
         # O3 axis (alu-cut): b0-carry extract ELIMINATION. At a depth-2/3 mux
@@ -932,7 +936,9 @@ class KernelBuilder:
                         reads=set(self.lanes(addr)) | set(self.lanes(mtmp2)) | set(self.lanes(mtmp)),
                         writes=self.lanes(node))
         else:
-            if (self._d4_mux > 0 or self._d4_cold > 0 or self._d4_cold_mask is not None) and self._pspace and depth == 4:
+            if self._gather_free:
+                pass  # O1 probe: skip depth>=4 node fetch (load-floor prize only)
+            elif (self._d4_mux > 0 or self._d4_cold > 0 or self._d4_cold_mask is not None) and self._pspace and depth == 4:
                 d4i = self._d4_no
                 self._d4_no += 1
                 if self._d4_cold_mask is not None:

@@ -31,11 +31,11 @@ import perf_takehome as P
 SHAPE = (10, 2 ** 11 - 1, 256, 16)
 SLOTS = {"valu": 6, "alu": 12, "load": 2, "flow": 1, "store": 1}
 N = 64
-ORACLE_ROT = 27
+ORACLE_ROT = int(os.environ.get("ORACLE_ROT", "29"))
 
-# shipped champions
-D3_CHAMP = [0, 1, 2, 3, 4, 37, 39, 40, 46, 54, 58]
-D4_CHAMP = [25, 26, 27, 29, 31, 34]
+# shipped champions @ 1094 (B0_CARRY=1 default)
+D3_CHAMP = [0, 1, 37]
+D4_CHAMP = [6, 7, 9, 16, 21, 23, 24, 25, 29, 32, 35]
 
 
 def _mask(idxs):
@@ -108,12 +108,12 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--T0", type=float, default=2.5)
     ap.add_argument("--cooling", type=float, default=0.9985)
-    ap.add_argument("--collect", type=int, default=1122,
+    ap.add_argument("--collect", type=int, default=1096,
                     help="collect distinct masks with oracle <= this for full-confirm")
     ap.add_argument("--topk", type=int, default=40,
                     help="max distinct masks to full-confirm (best oracle first)")
-    ap.add_argument("--gate1", type=int, default=1120, help="PSPACE=1 champ gate (strict <)")
-    ap.add_argument("--gate0", type=int, default=1187, help="PSPACE=0 gate (<=)")
+    ap.add_argument("--gate1", type=int, default=1094, help="PSPACE=1 champ gate (strict <)")
+    ap.add_argument("--gate0", type=int, default=1184, help="PSPACE=0 gate (<=)")
     ap.add_argument("--out", default=os.path.join(
         os.path.dirname(__file__), "..", "champ_d3d4_joint.json"))
     ap.add_argument("--pareto", default=os.path.join(

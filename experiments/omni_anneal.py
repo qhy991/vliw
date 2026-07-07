@@ -42,7 +42,7 @@ import perf_takehome as P
 
 SHAPE = (10, 2 ** 11 - 1, 256, 16)
 FOREST_HEIGHT, ROUNDS, K = 10, 16, 32
-ORACLE_ROT = 27
+ORACLE_ROT = int(os.environ.get("ORACLE_ROT", "29"))
 SLOTS = {"valu": 6, "alu": 12, "load": 2, "flow": 1, "store": 2}
 DEFAULT_OUT = os.path.join(os.path.dirname(__file__), "..", "champ_omni.json")
 

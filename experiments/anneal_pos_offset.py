@@ -57,11 +57,11 @@ def main():
     T0 = float(os.environ.get("T0", "2.0"))
     seed = int(os.environ.get("SEED", "2026"))
     win = int(os.environ.get("WIN", "2"))   # oracle half-window
+    center = int(os.environ.get("ORACLE_CENTER", "29"))
     rng = random.Random(seed)
     off, src = load_seed()
 
     base_full = full(SEED_OFF)
-    center = 27
     rots = list(range(center - win, center + win + 1))
     cur = ev_rots(off, rots)
     best = cur; best_off = list(off); best_full = base_full

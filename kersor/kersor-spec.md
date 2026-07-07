@@ -8,16 +8,16 @@
 
 - op: VLIW instruction scheduler (`KernelBuilder.build_kernel`)
 - backend: python (combinatorial / no GPU)
-- target_speedup: 1.092  (1092 → 1000 cycles; absolute baseline 147734 cycles)
+- target_speedup: 1.085  (1085 → 1000 cycles; absolute baseline 147734 cycles)
 - status: VERIFIED
 
 ## Constraints
 
 - Do NOT modify `tests/` or `problem.py`
-- Global best gate: `CYCLES <= 1092` (PSPACE=1), PSPACE=0 must stay <= 1184
+- Global best gate: `CYCLES <= 1085` (PSPACE=1), PSPACE=0 must stay <= 1184
 - Read `directions/LESSONS.md` before any experiment — do not retry listed NO-GO levers
-- Landed: W7-C joint offset+combine (1093→1092), combine #1304 (1094→1093), B0+d3/d4 retune
-- Active Wave-8 @ 1092: exotic genome search (W7-D); sub-1000 still needs structural load cut
+- Landed: d3×d4 joint SA (1091→1085), genome SA (1092→1091), W7-C (1093→1092)
+- Sub-1000 still needs correctness-preserving deep-gather cut; see `directions/46-wave7-1085-journey.md`
 - KerSor: `--allow-workflow-evolution --allow-workflow-authoring`; use VLIW-native workflows, NOT CUDA
 
 ---
@@ -28,22 +28,22 @@
 op=VLIW-perf_takehome-scheduler
 backend=python
 kernel_language=python
-target_speedup=1.092
+target_speedup=1.085
 seed_origin=provided_kernel
 kernel_path=/mnt/user_dir/shihaichao/qinhaiyan/vliw-w7-optimize/perf_takehome.py
 integration_pattern=standalone
 timing_method=e2e
 metric_contract=cycles
 forbid_pytest_wall_as_headline=false
-baseline_id=wave7-1092
-baseline_ms=1092
+baseline_id=wave7-1085
+baseline_ms=1085
 min_runs=3
 require_ci=false
 status=VERIFIED
 ===KERSOR-ENDBLOCK===
 
 ===KERSOR-BLOCK:test-method.md===
-# Test Method — VLIW perf_takehome @ 1092
+# Test Method — VLIW perf_takehome @ 1085
 
 ## Environment
 - Conda env: `vllm`
@@ -62,24 +62,27 @@ python parity_check.py && python algebra_check_ported.py
 ```bash
 python tests/submission_tests.py
 ```
-- Pass: prints `OK`, `CYCLES: N` where N <= current best (1092)
+- Pass: prints `OK`, `CYCLES: N` where N <= current best (1085)
 - Also run: `PSPACE=0 python tests/submission_tests.py` (must not regress 1184)
 
 ## Baseline
-- Baseline Latency (ms): 1092
-- Baseline: wave7-1092
-- Baseline Detail: W7-C joint offset+combine tail retune @ 1092 cycles
+- Baseline Latency (ms): 1085
+- Baseline: wave7-1085
+- Baseline Detail: d3×d4 joint SA + genome tail retune @ 1085 cycles
 - Timing Method: e2e
 - Baseline Status: present
 
 ## Local optimization tools (USE THESE — not CUDA workflows)
 | Tool | Purpose |
 |------|---------|
-| `experiments/anneal_joint_w7c.py` | Joint offset+combine SA (landed 1093→1092) |
+| `experiments/anneal_joint_w7c.py` | Joint offset+combine SA (1093→1092) |
+| `experiments/anneal_genome_w8.py` | Genome SA + `w7_oracle.py` (1092→1091) |
+| `experiments/anneal_d3d4_joint.py` | Joint d3×d4 mask SA (1091→1085) |
+| `directions/46-wave7-1085-journey.md` | Full optimization narrative |
 | `directions/LESSONS.md` | Do-not-repeat registry |
 
 ## User guidance (KerSor orchestrator)
-- Baseline **1092** (W7-C joint offset+combine). Beat 1092; PSPACE=0 <= 1184.
+- Baseline **1085** (d3×d4 joint + genome tail). Beat 1085; PSPACE=0 <= 1184.
 - NOT CUDA: evolve VLIW-native workflow on STALL.
 - Priority: (1) new deep-gather representation that is correctness-preserving, not `GATHER_FREE`; (2) structural traverse/hash deletion; (3) multi-rot tail/objective retune after any structural cut.
 - Read: directions/39-wave7-kersor-1094.md, directions/35-orthogonal-axes.md, directions/LESSONS.md

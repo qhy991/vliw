@@ -1,27 +1,31 @@
 {
-  "best_full1": 1116,
-  "best_full0": 1178,
+  "best_full1": 1085,
+  "best_full0": 1181,
   "d3": [
-    1,
+    0,
     2,
-    33,
+    39,
     41,
     44,
-    51,
-    58
+    57
   ],
   "d4": [
-    9,
+    10,
     11,
-    12,
+    14,
+    16,
+    17,
     20,
-    24,
-    26,
-    31
+    23,
+    25,
+    27,
+    28,
+    31,
+    33
   ],
-  "seed_full1": 1120,
-  "seed_full0": 1180,
-  "n_collected": 675,
-  "n_confirmed": 50,
+  "seed_full1": 1091,
+  "seed_full0": 1184,
+  "n_collected": 1503,
+  "n_confirmed": 40,
   "verdict": "IMPROVED past 1120"
 }

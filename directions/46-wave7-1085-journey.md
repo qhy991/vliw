@@ -1,150 +1,226 @@
-# Wave-7 优化历程：1093 → 1085（2026-07-07）
+# VLIW 优化全史：1230 → 1085（2026-07-07）
 
-本文档归纳 `explore/w7-optimize` 分支上，从 **1093** 一路压到 **1085 cycles**（PSPACE=1）的完整路径、每步机制与复现命令。当前 global best：**1085**（PSPACE=0 **1181**）。
+本文档归纳 `vliw-w7-optimize` / `explore/w7-optimize` 项目从 **~1230 cycles**（早期
+PSPACE=1 栈）到当前 global best **1085**（PSPACE=0 **1181**）的完整优化路径。
 
----
+绝对 naive 基线为 **147734 cycles**（未调度原始 kernel，`kersor-spec` 中的
+`baseline_ms` 对照分母）。本文主链跟踪 **PSPACE=1** 主分数。
 
-## 1. 总览
-
-| 阶段 | cycles | Δ | 杠杆类型 | 工具 / 分支 |
-|------|--------|---|----------|-------------|
-| W7 基线 | 1093 | — | B0 + sparse d3/d4 + rot29 offset + combine #1304 | `67301ba` |
-| **W7-C** | **1092** | −1 | 联合 tail packing（offset + combine） | `anneal_joint_w7c.py` |
-| **Wave-8 genome** | **1091** | −1 | 同上，更深联合 SA（666 valu combines） | `anneal_genome_w8.py` + `w7_oracle.py` |
-| **d3×d4 joint** | **1085** | −6 | 稀疏 mask 协同重搜（load↔flow 重分配） | `anneal_d3d4_joint.py` |
-
-**累计：1093 → 1085（−8 cycles）**
-
-核心规律：
-
-1. **单轴 SA 在 1093/1092 已耗尽** — 单独 flip combine、单独 step offset、d4 贪心扩展、key_idx 扫描均无 win。
-2. **联合搜索才能逃逸局部最优** — offset 与 combine 必须耦合 perturb；d3 与 d4 mask 必须 joint anneal。
-3. **两类杠杆正交、可叠加** — tail packing（op 总数不变）与 sparse gather/mux（load↔flow shuffle）作用于不同维度，按顺序落地可叠乘。
+**权威 NO-GO 注册表：** [`LESSONS.md`](LESSONS.md)  
+**中期栈详情：** [`RESULT.md`](../RESULT.md)  
+**方向索引：** [`INDEX.md`](INDEX.md)
 
 ---
 
-## 2. 引擎地板演进
+## 1. 一张表看完主链（有效落地）
+
+| # | 阶段 / Wave | cycles | Δ | 杠杆类型 | 要点 |
+|---|-------------|--------|---|----------|------|
+| 0 | naive kernel | 147734 | — | — | 无调度 |
+| 1 | 早期栈 (#11+#02+#10) | **1230** | — | 混合 | dead-idx、K5-defer、offset+combine |
+| 2 | 同上收敛 | **1208** | −22 | tail + defer | 上述组合打磨 |
+| 3 | #12 p-space traverse | **1184** | −24 | **消除** | parity `p` 存储，−248 valu |
+| 4 | #14 co-bind rebalance | **1179** | −5 | shuffle | 300 valu combines |
+| 5 | #15a extract 迁移 | **1174** | −5 | shuffle | 57 extract valu→alu + tail repack |
+| 6 | #15 s2+s3 fusion | **1157** | −17 | **消除** | −512 valu；binding 翻转到 load |
+| 7 | #18 micro purges | **1156** | −1 | 消除 | p-space 死常量门控 |
+| 8 | #28 const→flow | **1152** | −4 | shuffle | 12 setup const → flow |
+| 9 | #30 const_flow_mask | **1151** | −1 | shuffle | 58 const 逐实例 SA mask |
+| 10 | E2 d4 cold sparse | **1134** | −17 | shuffle | d4 gather→cold mux 窗口 |
+| 11 | W6-C joint d3×d4 | **1111** | −23* | shuffle | 相对 1134 图联合 mask（*自 1120 图 −9） |
+| 12 | W7 seed | **1094** | −17 | 叠加 | B0_CARRY + 新 d3/d4 + offset |
+| 13 | combine #1304 | **1093** | −1 | shuffle | combine mask 重平衡 |
+| 14 | W7-C joint SA | **1092** | −1 | tail | offset+combine 联合 |
+| 15 | Wave-8 genome SA | **1091** | −1 | tail | 666 valu combines |
+| 16 | d3×d4 joint SA | **1085** | −6 | shuffle | 新 mask 协同 @1091 图 |
+| | **当前 global best** | **1085** | | | **136.2×** vs naive |
+
+**1230 → 1085：−145 cycles（约 11.8%）**
+
+---
+
+## 2. 按 Wave 分段的优化「轮次」统计
+
+下面每一行是一次**独立落地**或**独立搜索战役**（含有效与无效）。粗算全项目
+**约 55–60 轮**，其中 **有效落地 ~18–20 个大台阶**，**无效/NO-GO ~35–40 轮**。
+
+### Wave-1～2（1230 → 1151）：结构消除 + 首次 binding 翻转
+
+**有效落地（9 步）：** 1208 → 1184 → 1179 → 1174 → 1157 → 1156 → 1152 → 1151
+
+| 轮次 | 内容 | 结果 |
+|------|------|------|
+| W1-1 | #11 dead-idx、#02 K5-defer、#10 offset+combine | → 1208 |
+| W1-2 | #03 depth-1 parity-carry | valu −64，**被吸收**（仍 1208） |
+| W2-1 | #12 p-space traverse + `anneal_pspace.py` | **1184** |
+| W2-2 | #14 `anneal_cobind.py` | **1179** |
+| W2-3 | #15a `anneal_extract.py` joint | **1174** |
+| W2-4 | #15 s2+s3 muladd fusion + re-anneal | **1157**（load 成 bind） |
+| W2-5 | #18 micro purges | **1156** |
+| W2-6 | #28 const→flow N=12 | **1152** |
+| W2-7 | #30 const_flow_mask SA | **1151** |
+
+**代表性 NO-GO（~15 轮）：**
+
+- #01 D3 gather on p-space → 1201+
+- co-bind anneal beyond #14 → flat 1180
+- D3-gather anneal → stuck 1184
+- #13 mem spill、#19a 2-round hash fuse
+- #20 d4 mux engine-split、#21 d5 partial mux
+- #22 traverse phase-2、#23 mem-bake K5、#24 tailgap setup pipe
+- omni @1156 → flat 1156；CP-SAT / modulo-pipeline ≤3c 差距
+
+### Wave-3～4（1151 → 1111）：load-floor shuffle + scratch 基建
+
+**有效落地（3 步）：** 1134（E2）→ 1120/1111（W6-C）→ recycler 78 free（cycle-neutral）
+
+| 轮次 | 内容 | 结果 |
+|------|------|------|
+| W3-1 | E2 `D4_COLD_MASK` sparse SA | **1134**（load 1043） |
+| W3-2 | #25 scratch recycler cherry-pick | 49→78 free，cycle-neutral |
+| W4-1 | W6-C `anneal_d3d4_joint.py` 联合 mask | **1111**（自 1120 −9） |
+| W4-2 | O3 `B0_CARRY` alu 消除（gated） | alu −65，@1111 **默认 OFF**（tail 回归） |
+
+**代表性 NO-GO（~10 轮）：**
+
+- #26 d4 table 真实现 → best **1251**（+99）
+- #27 alu repack → 前置 floor 不满足
+- O4 pos_offset @1111 → flat 1111
+- O2 valu fusion → valu sub-floor，吸收
+- d5 cold / X1 d5-stream @1111 → 全 NO-GO
+
+### Wave-5～6（1111 → 1093）：W7 seed + combine 精调
+
+**有效落地（2 步）：** 1094（W7 seed）→ 1093（combine #1304）
+
+| 轮次 | 内容 | 结果 |
+|------|------|------|
+| W5-1 | W7 seed：B0 默认 ON + d3 `{0,1,37}` + d4 新 mask + offset | **1094** |
+| W5-2 | combine mask #1304 retune | **1093** |
+
+**代表性 NO-GO（~12 轮）：**
+
+- 1094 上 pos_offset / d3d4 / omni / step / const_flow 全 flat
+- d4 expand 贪心 0 win；d5 cold +33c
+- W7-A deep-gather、W7-B traverse 删除 → NO-GO
+- KerSor CUDA workflow misfire；需本地 `anneal_*.py`
+
+### Wave-7～8 + 近期会话（1093 → 1085）
+
+**有效落地（3 步）：** 1092 → 1091 → 1085
+
+| 轮次 | 内容 | 结果 |
+|------|------|------|
+| W7-1 | W7-C `anneal_joint_w7c.py` | **1092**（642 valu combines） |
+| W8-1 | `anneal_genome_w8.py` + `w7_oracle.py` seed=99 | **1091**（666 combines） |
+| W7-2 | `anneal_d3d4_joint.py` 4×4000 @1091 gate | **1085** |
+
+**代表性 NO-GO（本段 ~14 轮）：**
+
+- genome SA 8-restart @1092 flat；4-restart @1085 flat
+- joint SA @1085 flat；key_idx / xor / depth skip / rot 穷举
+- `GATHER_FREE` 错误探针 997c（不可 ship）
+- omni-anneal IndexError；d4 单 bit 扩展 0/53
+
+---
+
+## 3. 引擎 binding 翻转史（为何「shuffle」常常无效）
 
 ```
-                load    valu    alu     F       bind    tail
-1093 baseline   1035.5  1031.7   998.7  1025.1  load    ~57.5
-1092 (W7-C)     1035.5  1048.8   930.0  1025.1  valu    ~43.2
-1091 (genome)   1035.5  1052.8   914.0  1025.1  valu    ~38.2
-1085 (d3×d4)    1043.5  1056.3   914.7   961.9  valu    ~28.7
+阶段          bind 引擎    典型 load floor   典型 tail
+─────────────────────────────────────────────────────
+@1174         valu        1070.5            ~75
+@1157         load        1070.5→1064.5     ~86
+@1134         load        1043              ~
+@1111         load        1083.5            ~27.5
+@1094         load/valu   1035.5            ~58.5
+@1085         valu        1043.5            ~28.7
 ```
 
-解读：
+**规律（LESSONS Rule A）：** `realized = max(load, alu, valu, flow, F) + tail`。
+在 sub-floor engine 上删 op 或 shuffle，payoff=0，直到该 engine 成为墙。
 
-- **1092/1091**：纯调度 win。load floor 不动；把更多 hash XOR combine 从 alu 挪到 valu（642→666），在 windup/drain 填 valu 空洞，缩短 tail。
-- **1085**：mask win。realized 下降来自 **tail 再压 ~10c** + 新 d3/d4 窗口让 load-idle 段更好吃 flow/mux 税；load floor 略升（1035.5→1043.5）但仍 sub bind，由 valu 绑定。
+**三次 binding 翻转：**
 
----
-
-## 3. 分步详解
-
-### Step A：1093 → 1092（W7-C joint offset + combine）
-
-**问题：** 在 1093 图上，单轴 `anneal_pos_offset`（rot29）和单 bit combine 扫描均 flat @1093。
-
-**做法：** `experiments/anneal_joint_w7c.py` — 每步同时扰动 `_POS_OFFSET_PSPACE_32x16`（32 int）与 `_COMBINE_VALU_PSPACE_32x16`（1536 bool）。
-
-**Oracle：** min over rotations `{25, 27, 29}`（单 rot29 在 offset 变异上会误判 +10c）。
-
-**落地变更：**
-
-- `_COMBINE_VALU_PSPACE_32x16`：539 → **642** valu combines
-- `_POS_OFFSET_PSPACE_32x16`：25 处 offset 调整
-- commit：`890f7e1`
-
-**机制：** hash stage 的 `_combine` 在 valu（1 slot）与 alu（8 slot）间算术等价；选 engine 只改 packing。联合 SA 找到「更多 valu combine + 特定 windup/drain phasing」的耦合点。
+1. **#15 后** valu → load（s2+s3 删 512 valu）
+2. **E2/W6 后** load 仍 bind，但 mask shuffle 改 tail 而非 floor
+3. **@1094** load/valu/F 三墙贴近；@1085 valu 略超 load 成 bind
 
 ---
 
-### Step B：1092 → 1091（Wave-8 genome SA）
+## 4. 两类正交杠杆（全史反复验证）
 
-**问题：** W7-C 后 combine+offset 仍是单轴局部最优；需要更快迭代 + 更大步长联合 move。
+| 类型 | 做什么 | 典型工具 | 全史代表 |
+|------|--------|----------|----------|
+| **消除 (elimination)** | 减少 op 总数 | s2+s3 fusion, p-space, micro purge | 1184, 1157 |
+| **重分配 (shuffle)** | load↔flow↔alu↔valu 搬家 | combine/extract mask, d3/d4 mask, const→flow | 1179, 1134, 1111, 1085 |
+| **纯调度 (tail)** | op 总数不变，改 packing | offset, rotation, joint SA | 1208, 1092, 1091 |
 
-**做法：**
+**堆叠契约：**
 
-- 新增 `experiments/w7_oracle.py`：rot-window 快速评估（~1s），floor 精确、cycles 为 proxy
-- 新增 `experiments/anneal_genome_w8.py`：JSON genome `{"combine_mask", "pos_offset"}`，每步同时 flip 1–6 combine bits **且** step 1–4 offset 项
-
-**关键 run：** `seed=99, iters=2000, kmax=5, jmax=3` → proxy rot29 **1091**，full-32 确认 **1091**。
-
-**落地变更：**
-
-- valu combines：642 → **666**（+24 net）
-- `_POS_OFFSET_PSPACE_32x16`：19 处相对 1092 再调
-- champion：`experiments/champ_w8.json`
-
-**机制：** 与 Step A 同类（tail packing），但搜索空间更大（kmax/jmax 更高），在 1092 basin 边缘再抠 1c tail。
+- shuffle 之间**常常互斥**（cherry-pick 旧 graph champ → 回归）
+- 任何 structural/mask 改图后 **必须 re-anneal**（Rule C）
+- elimination 才能动 floor；shuffle 上限 ≈ tail gap
 
 ---
 
-### Step C：1091 → 1085（d3×d4 joint SA）
+## 5. Wave-7～8 详解（1093 → 1085）
 
-**问题：** 纯 tail SA @1091 四轮 genome restart 全部 flat；需动 **load↔flow** 分配。
+> 本段为近期 `explore/w7-optimize` 分支上的三步 win；对话记录中常被误当作
+> 「项目起点」，实际只是全史末段。
 
-**做法：** `experiments/anneal_d3d4_joint.py`，gate `GATE1=1091`：
+### 5.1 1093 → 1092（W7-C joint offset + combine）
 
-- Phase 1：4×4000 iter SA，联合 flip `D3_GATHER_MASK` × `D4_COLD_MASK`（各 64 bit）
-- Phase 2：对 top-40 oracle 候选做 full-32 确认
+- **工具：** `experiments/anneal_joint_w7c.py`
+- **Oracle：** min rotations `{25, 27, 29}`（单 rot29 误判 offset +10c）
+- **变更：** 642 valu combines；25 处 offset；commit `890f7e1`
+- **机制：** `_combine` engine 选择 + windup/drain phasing 联合逃逸
 
-**最佳 mask（full-32 确认）：**
+### 5.2 1092 → 1091（Wave-8 genome SA）
 
-```text
-D3_GATHER_MASK = {0, 2, 39, 41, 44, 57}     # 6/64 instances → scalar gather
-D4_COLD_MASK   = {10,11,14,16,17,20,23,25,27,28,31,33}  # 12/64 → cold vload mux
-```
+- **工具：** `experiments/w7_oracle.py` + `anneal_genome_w8.py`
+- **Run：** seed=99, iters=2000, kmax=5, jmax=3 → full-32 **1091**
+- **变更：** 666 valu combines；champ `experiments/champ_w8.json`
 
-（旧 shipped：`d3={0,1,37}`，`d4={6,7,9,16,21,23,24,25,29,32,35}`）
+### 5.3 1091 → 1085（d3×d4 joint SA）
 
-**结果：** PSPACE=1 **1085**，PSPACE=0 **1181**；1503 个 distinct oracle≤1096 mask 中最佳。
+- **工具：** `experiments/anneal_d3d4_joint.py`（4×4000 iter + top-40 full-32）
+- **新 mask：**
+  ```text
+  D3_GATHER_MASK = {0, 2, 39, 41, 44, 57}
+  D4_COLD_MASK   = {10,11,14,16,17,20,23,25,27,28,31,33}
+  ```
+- **旧 mask：** d3 `{0,1,37}`，d4 `{6,7,9,16,21,23,24,25,29,32,35}`
+- **结果：** PSPACE=1 **1085**，PSPACE=0 **1181**；champ `champ_d3d4_joint.json`
 
-**机制：**
-
-- d3 gather：**+8 load / instance**，但可把 gather 放进 load-idle 的 drain 窗口
-- d4 cold mux：**−8 load / instance**，付 flow+valu 税，仅在 schedule 友好 slot 净赢
-- **协同：** d3 与 d4 单独搜 @1091 均 NO-GO；联合搜才找到 load=1043.5 处 realized 最低的窗口组合
-
-champion：`champ_d3d4_joint.json`
-
----
-
-## 4. 已验证 NO-GO（勿重烧）
-
-| 方向 | @1091/1085 结果 | 原因 |
-|------|-----------------|------|
-| d4 mask 单 bit 贪心扩展 | 0/53 win | `probe_w7_d4_expand.py` |
-| genome SA @1085（4 restart） | flat 1085 | tail 局部最优 |
-| d5 cold mux | +13c best | flow 税 > load 省 |
-| depth≥5 gather 删除（正确性破坏） | skip d5–d10 → 1072 错误输出 | 仅 scheduler 下界 |
-| `GATHER_FREE=1`（错误输出） | **997c** @1085 图 | 证明 sub-1000 需 **correctness-preserving** deep gather |
-| B0_CARRY @1091 | 无收益 | alu 已 sub-floor |
-| xor / key_idx 单轴 | 无 win | engine shuffle 吸收 |
-
----
-
-## 5. 距 sub-1000
-
-@1085 正确实现的地板：
+### 5.4 @1085 引擎 profile
 
 ```
-valu BIND  1056.3
-load       1043.5
-tail        28.7
+load    1043.5
+valu    1056.3  ← BIND
+alu      914.7
+F        961.9
+tail      28.7
 ```
-
-`GATHER_FREE` 错误探针 @1085：**1004c**（+81c 名义空间），offset sweep 最佳 **997c** — 调度器有余量，但 **缺少不破坏语义的 depth≥5 gather 替代**（无 `vgather`、d5 tournament 已 NO-GO）。
-
-可行下一步：
-
-1. correctness-preserving deep-gather（mem-side / 跨轮 prefetch）
-2. 任何 structural load cut 后 **必须** 在新区间重跑 `anneal_genome_w8` + `anneal_d3d4_joint`（Rule C：禁止 cherry-pick 旧 champ）
 
 ---
 
-## 6. 复现
+## 6. 距 sub-1000
+
+@1085 正确实现仍距 1000 差 **85c**。
+
+| 探针 | cycles | 说明 |
+|------|--------|------|
+| 当前 shipped | **1085** | correctness-preserving |
+| `GATHER_FREE=1` @1085 | **1004** | **错误输出**，仅 scheduler 下界 |
+| + offset sweep | **997** | 同上，不可 ship |
+
+**结论：** sub-1000 需要 **correctness-preserving 的 depth≥5 gather 替代**
+（无 `vgather`、d5 tournament / deep-gather 已 NO-GO）。纯 tail SA 在 1085 已穷尽。
+
+---
+
+## 7. 复现
 
 ```bash
 cd vliw-w7-optimize
@@ -158,7 +234,7 @@ python parity_check.py && python algebra_check_ported.py
 # 引擎 profile
 python experiments/w7_oracle.py --json
 
-# 重跑各 SA（耗时：genome ~10min/restart，d3d4 ~70min）
+# 重跑 Wave-7/8 SA（耗时）
 SEED=7777 ITERS=6000 python experiments/anneal_joint_w7c.py
 python experiments/anneal_genome_w8.py --iters 2000 --seed 99 --restarts 1
 ORACLE_ROT=29 GATE1=1091 ITERS=4000 python experiments/anneal_d3d4_joint.py
@@ -166,25 +242,42 @@ ORACLE_ROT=29 GATE1=1091 ITERS=4000 python experiments/anneal_d3d4_joint.py
 
 ---
 
-## 7. 关键文件索引
+## 8. 关键文件索引
 
 | 文件 | 作用 |
 |------|------|
-| `perf_takehome.py` | shipped 常量：d3/d4 mask、offset、combine |
-| `experiments/w7_oracle.py` | 快速 rot-window 评估 |
-| `experiments/anneal_genome_w8.py` | combine+offset 联合 genome SA |
-| `experiments/anneal_joint_w7c.py` | W7-C 联合 SA（1093→1092 同源） |
-| `experiments/anneal_d3d4_joint.py` | d3×d4 联合 SA |
-| `experiments/champ_w8.json` | 1091 genome champion |
-| `champ_d3d4_joint.json` | 1085 mask champion |
+| `perf_takehome.py` | shipped 常量 |
+| `RESULT.md` | Wave-1～2 栈与 #15/#28 详情 |
 | `directions/LESSONS.md` | NO-GO 注册表 |
+| `directions/33-d3d4-joint-anneal.md` | W6-C 1111 win 文档 |
+| `directions/INDEX.md` | 方向索引 @1094 |
+| `experiments/anneal_d3d4_joint.py` | d3×d4 联合 SA |
+| `experiments/anneal_joint_w7c.py` | offset+combine 联合 SA |
+| `experiments/anneal_genome_w8.py` | genome SA |
+| `experiments/w7_oracle.py` | 快速评估 |
+| `champ_d3d4_joint.json` | 1085 mask champion |
+| `experiments/champ_w8.json` | 1091 genome champion |
 
 ---
 
-## 8. 方法论摘要（可复用）
+## 9. 方法论摘要（全史沉淀）
 
-1. **先 profile 再动刀** — `realized = max(floors) + tail`；动 sub-floor engine  payoff=0。
-2. **联合搜 > 单轴搜** — 当两轴耦合（offset×combine、d3×d4），必须同一步 mutate。
-3. **Oracle 契约** — rot29 快但 offset 变异需 `{25,27,29}` window；新 best 必须 full-32 confirm。
-4. **正交杠杆可堆叠** — tail packing（Step A/B）与 mask shuffle（Step C）改不同维度；堆叠顺序：先 mask 改图，再 tail SA 重搜。
-5. **sub-1000 需要 elimination** — shuffle 上限 ~1090 段；破 1000 要减少 binding load op（deep gather 表示替换），非更多 engine 分配。
+1. **先 profile 再动刀** — 弄清 bind 引擎与 tail，再选 elimination vs shuffle。
+2. **联合搜 > 单轴搜** — offset×combine、d3×d4 必须耦合 mutate。
+3. **禁止跨图 cherry-pick** — 旧 graph 的 champ 在新图上常回归（1115+）。
+4. **Oracle 契约** — rot-window proxy + full-32 confirm；offset 变异勿用单 rot29。
+5. **Rule C** — 任何 op-count / mask 变更后 re-seed SA，勿 `--resume`  stale champ。
+6. **sub-1000 = elimination** — shuffle 在 ~1090 段接近天花板；需 deep-gather 结构突破。
+
+---
+
+## 10. 附录：对话记录 vs 项目全史
+
+| 视角 | 起点 | 终点 | 有效 win 数 |
+|------|------|------|-------------|
+| **项目全史** | 1230（naive 147734） | **1085** | ~18–20 大台阶 |
+| **近期会话** | ~1094/1093 | **1085** | 3 步（1092/1091/1085） |
+| **全项目尝试** | — | — | ~55–60 轮（含 NO-GO） |
+
+先前版本本文档仅从 1093 写起，范围偏窄；本版补全 **1230→1085** 主链与分 Wave
+轮次统计，作为项目优化史的单一入口文档。

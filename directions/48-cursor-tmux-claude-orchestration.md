@@ -334,6 +334,7 @@ git diff -- tests/   # 必须为空
 | 类型 | 路径 |
 |------|------|
 | 本手册 | `directions/48-cursor-tmux-claude-orchestration.md` |
+| Slides 叙述稿 | `directions/49-agentic-slides-narrative.md` |
 | 搜索与验证 SOP | `directions/47-cursor-experiment-agentic-playbook.md` |
 | 全史复盘 | `directions/46-wave7-1085-journey.md` |
 | 禁止重试 | `directions/LESSONS.md` |

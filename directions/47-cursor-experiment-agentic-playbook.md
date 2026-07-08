@@ -89,6 +89,7 @@
 ## 8. 配套文件
 
 - 编排手册（tmux + Claude）：`directions/48-cursor-tmux-claude-orchestration.md`
+- Slides 叙述稿：`directions/49-agentic-slides-narrative.md`
 - 全史：`directions/46-wave7-1085-journey.md`
 - 禁止重试：`directions/LESSONS.md`
 - 关键工具：

@@ -8,6 +8,7 @@
 - 全史复盘：[`46-wave7-1085-journey.md`](46-wave7-1085-journey.md)
 - 搜索 SOP：[`47-cursor-experiment-agentic-playbook.md`](47-cursor-experiment-agentic-playbook.md)
 - 编排手册：[`48-cursor-tmux-claude-orchestration.md`](48-cursor-tmux-claude-orchestration.md)
+- Slides 叙述稿：[`49-agentic-slides-narrative.md`](49-agentic-slides-narrative.md)
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 

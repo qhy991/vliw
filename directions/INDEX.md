@@ -1,8 +1,13 @@
-# VLIW Kernel Optimization — Direction Index (@ 1094)
+# VLIW Kernel Optimization — Direction Index (@ 1085)
 
-**Global best:** `explore/wave6-1111` @ **1094 cycles** (135.04×), verified `tests/submission_tests.py`.
+**Global best:** `explore/w7-optimize` @ **1085 cycles** (PSPACE=1), verified `tests/submission_tests.py`.
 
 **Do-not-repeat registry:** [`LESSONS.md`](LESSONS.md) — read before opening any worktree.
+
+**Agentic docs:**
+- 全史复盘：[`46-wave7-1085-journey.md`](46-wave7-1085-journey.md)
+- 搜索 SOP：[`47-cursor-experiment-agentic-playbook.md`](47-cursor-experiment-agentic-playbook.md)
+- 编排手册：[`48-cursor-tmux-claude-orchestration.md`](48-cursor-tmux-claude-orchestration.md)
 
 Fixed shape: `forest_height=10`, `rounds=16`, `batch_size=256`. Score = `len(kb.instrs)`.
 

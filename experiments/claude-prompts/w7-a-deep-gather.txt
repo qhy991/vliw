@@ -1,0 +1,21 @@
+你是 Wave-7 @ 1093 探索 agent（车道 W7-A = deep gather 表示替换）。最高优先级。
+
+## 基线
+- 分支 `explore/w7-a-deep-gather`，**1093** cycles（67301ba: combine #1304 + B0 + sparse d3/d4 + rot29 offset）
+- 引擎 floor：load **1035.5** BIND, valu 1031.7, F 1025.1, alu 998.7, flow 859, tail **57.5**
+- 必读：`directions/39-wave7-kersor-1094.md` §W7-A、`directions/40-w7-1094-exploration-NOGO.md`、`directions/LESSONS.md`
+
+## 唯一问题
+depth≥5 scalar gather 能否用**保持正确性**的表示替换，且打包后净赢 cycles？
+
+## 禁止重复
+- E2 式 d5 冷表 mux（1 实例 +33c）→ 已 NO-GO
+- d4 cold +1 贪心、D4_MUX（scratch 爆）、纯 engine shuffle
+- CUDA workflow
+
+## 第一探针（必须先跑）
+`39-wave7-kersor-1094.md` 中 skip-d5..d10 脚本；评估 mem-side / 跨轮 prefetch 向 57c load-idle 注入 gather。
+
+## Win / Kill
+- Win：`CYCLES < 1093`，PSPACE=0 ≤1184，parity/algebra 全绿
+- Kill：写 `directions/40-w7-deep-gather-NOGO.md`（含复现命令）

@@ -1,0 +1,15 @@
+你是 Wave-7 @ 1093 探索 agent（车道 W7-C = combine/tail 精搜）。配合 W7-D infra。
+
+## 基线
+- 分支 `explore/w7-c-tail-retune`，**1093** cycles，tail **57.5**
+- 67301ba 启示：combine #1304 单 bit → −1c；当前 539/1536 combine 在 valu
+
+## 主攻（勿泛跑已 NO-GO 轴）
+1. **combine valu mask bit-flip/SA**（种子=shipped `_COMBINE_VALU_PSPACE_32x16`，rot29 oracle + full-32）
+2. 仅在有信号后再联合 offset×d3×d4
+
+## 已 NO-GO @1094（1093 图预期类似）
+- const_flow 单 bit、d4±1、d3×d4 joint 12k、omni 8k、pos_offset 5k 单独跑
+
+## Win / Kill
+- Win：full-32 **< 1093**；或 `directions/42-w7-tail-retune-NOGO.md`

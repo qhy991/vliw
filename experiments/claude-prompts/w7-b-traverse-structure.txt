@@ -1,0 +1,15 @@
+你是 Wave-7 @ 1093 探索 agent（车道 W7-B = traverse/hash 结构删除）。低优先级。
+
+## 基线
+- 分支 `explore/w7-b-traverse-structure`，**1093** cycles
+- 必读：`directions/39-wave7-kersor-1094.md` §W7-B
+
+## 唯一问题
+traverse/hash 是否还有可**删除**的 op（非 engine 搬运）？
+
+## 已知
+- B0_CARRY on；extract mask 全覆盖；hash s1/s5 曾不可约
+- 先做 wrong-output free-delete 探针：下界未比 1093 低 ≥10c 则立即 NO-GO
+
+## Win / Kill
+- Win：`CYCLES < 1093` 或 `directions/41-w7-traverse-structure-NOGO.md`

@@ -1,0 +1,17 @@
+你是 Wave-7 @ 1093 探索 agent（车道 W7-D = 搜索基础设施）。为 W7-C 服务，可并行 W7-A。
+
+## 基线
+- 分支 `explore/w7-d-scheduler-objective`，**1093** cycles
+
+## 交付
+创建 `experiments/w7_oracle.py`：
+- `build_full(genome) -> cycles`
+- `build_rots(genome, rots=(25,27,29)) -> min_cycles`
+- 报告 load/alu/valu/flow/F/tail + JSON
+
+## 要求
+- 必须精确复现 baseline **1093**
+- 100 次 rot-window 评估 <10 分钟
+
+## Win
+- infra 被 W7-C 用于找到 <1093；或文档 `directions/43-w7-search-infra.md`

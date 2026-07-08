@@ -134,6 +134,13 @@ CLASSES = {
         probe=lambda kb: kb._const_flow_idx,
         seed=lambda kb: list(kb._const_flow_mask),
         flip_bias=0.5),
+    # #47 traverse rem: val%2 == val&1, valu(1 slot) vs alu(8 slots). F-invariant
+    # shuffle off the binding valu floor; default all True == shipped `%` on valu.
+    "rem": ClassSpec(
+        attr="_rem_mask", kind="mask",
+        probe=lambda kb: kb._rem_no,
+        seed=lambda kb: [True] * kb._rem_no,
+        flip_bias=0.7),
 }
 
 

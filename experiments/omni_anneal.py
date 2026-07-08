@@ -257,12 +257,19 @@ class Proposer:
     def _flip_mask_bit(self, mask, name, to_alu=None):
         """Flip one boundary-weighted bit of `mask`; if to_alu given, prefer an
         index currently on that source engine so the flip achieves the intent."""
+        # Be robust to temporary size drift between probed sizes and runtime masks.
+        # This can happen when new optional knobs alter instrumentation counters.
+        wts = self.wts.get(name, [])
+        n = min(len(mask), len(wts)) if wts else len(mask)
+        if n <= 0:
+            return
+        mask = mask[:n] + mask[n:]
         if to_alu is None:
             to_alu = self.rng.random() < CLASSES[name].flip_bias
-        cands = [i for i, b in enumerate(mask) if b == to_alu]
+        cands = [i for i, b in enumerate(mask[:n]) if b == to_alu]
         if not cands:
-            cands = list(range(len(mask)))
-        w = [self.wts[name][i] for i in cands]
+            cands = list(range(n))
+        w = [wts[i] if i < len(wts) else 1.0 for i in cands]
         i = self.rng.choices(cands, weights=w, k=1)[0]
         mask[i] = not mask[i]
 

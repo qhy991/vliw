@@ -52,6 +52,11 @@ Full detail: [`RESULT.md`](../RESULT.md).
 | 3 | Multi-rot tail and mask retune | `explore/w7-c-tail-retune` | Open; lower expected payoff without a structural cut |
 | 4 | Scheduler objective/search infra | `explore/w7-d-scheduler-objective` | Open; support lane |
 
+**Sub-1000 方案库（floor 确诊 + 7 方案）:** [`40-w7-subkilo-plans.md`](40-w7-subkilo-plans.md).
+最高赔率 = 方案 C/G（store→vload 把 gather 连续化）；低风险 = 方案 A（多 seed
+const→flow，load floor 1035.5→1012）。flip-p 已证伪（代数 PASS / 性能 NO-GO，
+LESSONS V11）。
+
 Create worktrees with:
 
 ```bash

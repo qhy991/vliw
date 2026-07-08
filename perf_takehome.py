@@ -441,12 +441,16 @@ class KernelBuilder:
         self._extract_no = 0
         self._step = 4
         self._key_idx = 0
+        # Scratch/perf tradeoff knob for d2/d3/d4 temporary groups.
+        # Default stays 3 (shipped). Smaller values can free scratch for
+        # deep-gather experiments at the cost of more WAR serialization.
         self._num_mtmp_groups = 3
         self._pos_offset = None       # per-position emit start offset override
         self._rotations = None        # None -> try all K rotations (shipped)
         # Drain-targeted mux->gather (dir #01): last N depth-3 instances in
         # emit order switch from 7 flow + 3 valu mux to 8 scalar gathers.
         import os as _os
+        self._num_mtmp_groups = max(1, int(_os.environ.get("MTMP_G", str(self._num_mtmp_groups))))
         self._d3_no = 0
         self._d3_total = 0
         self._d3_gather_tail = int(_os.environ.get("D3_GATHER_TAIL", "0"))
@@ -485,6 +489,10 @@ class KernelBuilder:
         # D4_COLD_MASK is a JSON 0/1 list over d4 emit order. The shipped sparse
         # mask converts only schedule-friendly d4 instances; use [] to disable.
         self._d4_cold = int(_os.environ.get("D4_COLD", "0"))
+        # W7: setup-broadcast nb15..nb30 for d4 cold instances (eliminates 16
+        # runtime vbroadcast per cold mux). Needs +88w vs resident cold table;
+        # fund via NODE_POOL_G. Default off; probe with D4_HOT_NB=1.
+        self._d4_hot_nb = int(_os.environ.get("D4_HOT_NB", "0"))
         _d4cm = _os.environ.get("D4_COLD_MASK")
         self._d4_cold_mask = None
         self._d4_cold_mask_disabled = False
@@ -501,6 +509,18 @@ class KernelBuilder:
                 for i in range(64)
             ]
         self._d4_no = 0
+        # W7 d5 cold-table probe: depth-5 gather -> 32-way cold mux over vloaded
+        # tree[31..62]. Default off; D5_COLD_MASK JSON over 32 emit-order instances.
+        self._d5_cold = int(_os.environ.get("D5_COLD", "0"))
+        _d5cm = _os.environ.get("D5_COLD_MASK")
+        self._d5_cold_mask = None
+        if _d5cm is not None:
+            import json as _json_d5cm
+            parsed = [] if not _d5cm.strip() else _json_d5cm.loads(_d5cm)
+            self._d5_cold_mask = [bool(x) for x in parsed] or None
+        elif self._d5_cold > 0:
+            self._d5_cold_mask = [True] * 32
+        self._d5_no = 0
         # O1 stack probe: delete all depth>=4 node fetches (gather/mux/vload).
         # Output WRONG — schedule-length only (same probe as #20/#27 D4_FREE
         # extended to depths 5-10). Use experiments/probe_o1o3_stack.py.
@@ -797,6 +817,60 @@ class KernelBuilder:
         self.v_alu_ex("&", addr, idx, c["eight"])
         vsel(node, addr, node, c["d4_stash"])
 
+    def _d5_cold_mux_node(self, node, addr, idx, c, j):
+        """W7 probe: node = tree[31+p], p in {0..31}, via two 16-way cold subtrees
+        over vloaded d5_q0..d5_q3 and a final b4 select (p-space idx holds p)."""
+        g = j % c["_num_mtmp_groups"]
+        m1 = c[f"mtmp_{g}"]
+        m2 = c[f"mtmp2_{g}"]
+        m3 = c[f"mtmp3_{g}"]
+        bc0, bc1 = c["d5_bc0"], c["d5_bc1"]
+        one_v = c["one"]
+
+        def vsel(dest, cond, A, B):
+            self.op("flow", ("vselect", dest, cond, A, B),
+                    reads=set(self.lanes(cond)) | set(self.lanes(A)) | set(self.lanes(B)),
+                    writes=self.lanes(dest))
+
+        def vbc(dest, lane_addr):
+            self.op("valu", ("vbroadcast", dest, lane_addr),
+                    reads=(lane_addr,), writes=self.lanes(dest))
+
+        def vsel_pair(dest, cond, lane_a, lane_b):
+            vbc(bc0, lane_a)
+            vbc(bc1, lane_b)
+            vsel(dest, cond, bc0, bc1)
+
+        def subtree16(base_lo, base_hi, dest, pvec):
+            """16-way tournament; pvec holds p&15 (per-lane)."""
+            self.v_alu_ex("&", addr, pvec, one_v)
+            vsel_pair(m1, addr, base_lo + 1, base_lo + 0)
+            vsel_pair(m2, addr, base_lo + 3, base_lo + 2)
+            vsel_pair(m3, addr, base_lo + 5, base_lo + 4)
+            vsel_pair(node, addr, base_lo + 7, base_lo + 6)
+            self.v_alu_ex("&", addr, pvec, c["two"])
+            vsel(m1, addr, m2, m1)
+            vsel(m3, addr, node, m3)
+            self.v_alu_ex("&", addr, pvec, c["four"])
+            vsel(m1, addr, m3, m1)
+            self.v_alu_ex("&", addr, pvec, c["eight"])
+            vsel_pair(m2, addr, base_hi + 1, base_hi + 0)
+            vsel_pair(m3, addr, base_hi + 3, base_hi + 2)
+            vsel_pair(node, addr, base_hi + 5, base_hi + 4)
+            vsel_pair(m2, addr, base_hi + 7, base_hi + 6)
+            self.v_alu_ex("&", addr, pvec, c["two"])
+            vsel(m3, addr, m2, m3)
+            vsel(m2, addr, node, m2)
+            self.v_alu_ex("&", addr, pvec, c["eight"])
+            vsel(dest, addr, m2, m1)
+
+        q0, q1, q2, q3 = c["d5_q0"], c["d5_q1"], c["d5_q2"], c["d5_q3"]
+        self.v_alu_ex("&", m1, idx, c["fifteen"])   # p_lo = p & 15
+        subtree16(q0, q1, c["d5_stash"], m1)
+        subtree16(q2, q3, node, m1)
+        self.v_alu_ex("&", addr, idx, c["sixteen"])  # b4 = p & 16
+        vsel(node, addr, node, c["d5_stash"])
+
     # one round, all vectors (per-vector: original ordering packs best) ----- #
     # depth = round % (forest_height+1). By structural invariant every element
     # is at that tree depth this round, so:
@@ -953,13 +1027,23 @@ class KernelBuilder:
         else:
             if self._gather_free:
                 pass  # O1 probe: skip depth>=4 node fetch (load-floor prize only)
+            elif (self._d5_cold_mask is not None) and self._pspace and depth == 5:
+                d5i = self._d5_no
+                self._d5_no += 1
+                if d5i < len(self._d5_cold_mask) and self._d5_cold_mask[d5i]:
+                    self._d5_cold_mux_node(node, addr, idx, c, j)
+                else:
+                    self._gather_node(node, addr, idx, c, depth)
             elif (self._d4_mux > 0 or self._d4_cold > 0 or self._d4_cold_mask is not None) and self._pspace and depth == 4:
                 d4i = self._d4_no
                 self._d4_no += 1
                 if self._d4_cold_mask is not None:
                     use_cold = d4i < len(self._d4_cold_mask) and self._d4_cold_mask[d4i]
                     if use_cold:
-                        self._d4_cold_mux_node(node, addr, idx, c, j)
+                        if self._d4_hot_nb > 0:
+                            self._d4_mux_node(node, addr, idx, c, j)
+                        else:
+                            self._d4_cold_mux_node(node, addr, idx, c, j)
                     else:
                         self._gather_node(node, addr, idx, c, depth)
                 else:
@@ -1281,8 +1365,8 @@ class KernelBuilder:
             c[f"mtmp3_{g}"] = self.vec(f"mtmp3_{g}")
             # #26: the d4 16-way tournament needs 2 more group temps than d3's
             # 8-way (4 subtree results + 1 subtree scratch). Only allocate when
-            # the d4 mux is active to keep the shipped build's footprint intact.
-            if self._d4_mux > 0:
+            # the d4 mux / hot-nb cold path is active to keep footprint intact.
+            if self._d4_mux > 0 or self._d4_hot_nb > 0:
                 c[f"mtmp4_{g}"] = self.vec(f"mtmp4_{g}")
                 c[f"mtmp5_{g}"] = self.vec(f"mtmp5_{g}")
         # backwards-compat aliases
@@ -1317,23 +1401,47 @@ class KernelBuilder:
             self.free_scratch(fvp_p23, 1)
 
         # ---- E2 cold-table: vload tree[15..30] once (16w), vbroadcast at mux time.
+        # D4_HOT_NB: setup-broadcast nb15..nb30 (128w) and use _d4_mux_node in
+        # the hot path -- deletes 16 runtime vbroadcast per cold instance.
         if (self._d4_cold > 0 or self._d4_cold_mask is not None) and self._pspace:
             d4_lo = self.vec("d4_lo")
             d4_hi = self.vec("d4_hi")
-            c["d4_bc0"] = self.vec("d4_bc0")
-            c["d4_bc1"] = self.vec("d4_bc1")
-            c["d4_stash"] = self.vec("d4_stash")
             fvp_p15 = self.scratch_const(FVP + 15, "fvp_p15")
             fvp_p23 = self.scratch_const(FVP + 23, "fvp_p23")
             self.op("load", ("vload", d4_lo, fvp_p15),
                     reads=(fvp_p15,), writes=tuple(d4_lo + i for i in range(V)))
             self.op("load", ("vload", d4_hi, fvp_p23),
                     reads=(fvp_p23,), writes=tuple(d4_hi + i for i in range(V)))
-            c["d4_lo"] = d4_lo
-            c["d4_hi"] = d4_hi
+            if self._d4_hot_nb > 0:
+                for pos in range(16):
+                    src = (d4_lo + pos) if pos < 8 else (d4_hi + (pos - 8))
+                    c[f"nb{15+pos}"] = self.broadcast_scalar(f"nb{15+pos}", src)
+                self.free_scratch(d4_lo, V)
+                self.free_scratch(d4_hi, V)
+            else:
+                c["d4_bc0"] = self.vec("d4_bc0")
+                c["d4_bc1"] = self.vec("d4_bc1")
+                c["d4_stash"] = self.vec("d4_stash")
+                c["d4_lo"] = d4_lo
+                c["d4_hi"] = d4_hi
             c["eight"] = self.broadcast_const("eight", 8)
             self.free_scratch(fvp_p15, 1)
             self.free_scratch(fvp_p23, 1)
+
+        # ---- W7 d5 cold-table probe: vload tree[31..62] once (32w) ----
+        if self._d5_cold_mask is not None and self._pspace:
+            d5_q = [self.vec(f"d5_q{i}") for i in range(4)]
+            c["d5_bc0"] = self.vec("d5_bc0")
+            c["d5_bc1"] = self.vec("d5_bc1")
+            c["d5_stash"] = self.vec("d5_stash")
+            for i, qv in enumerate(d5_q):
+                base = self.scratch_const(FVP + 31 + 8 * i, f"fvp_p{31+8*i}")
+                self.op("load", ("vload", qv, base),
+                        reads=(base,), writes=tuple(qv + k for k in range(V)))
+                self.free_scratch(base, 1)
+                c[f"d5_q{i}"] = qv
+            c["sixteen"] = self.broadcast_const("sixteen", 16)
+            c["fifteen"] = self.broadcast_const("fifteen", 15)
 
         self.emit()  # setup bundles
 
@@ -1495,6 +1603,8 @@ class KernelBuilder:
             self._d3_total = K * sum(1 for r in range(rounds) if r % h1 == 3)
             self._d4_no = 0
             self._d4_total = K * sum(1 for r in range(rounds) if r % h1 == 4)
+            self._d5_no = 0
+            self._d5_total = K * sum(1 for r in range(rounds) if r % h1 == 5)
             perm = [(j - rot) % K for j in range(K)]
             ppos = {perm[p]: p for p in range(K)}
             # Per-emit-position start offset. Default = p//step (the uniform

@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "through_round": 0,
+  "items": [
+    {
+      "id": "ins-exp-1",
+      "kind": "workflow_compatibility",
+      "directive": "constrain",
+      "claim": "ksearch-kernel-optimization must NOT be selected again for this session (session_id=20260614-200847). All 6 dispatch attempts failed with agent_stall. No other tree-search or adaexplore workflow should be selected until the environment stall root cause is resolved.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda"
+      },
+      "actionable_hint": "",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260614200847-047"
+    },
+    {
+      "id": "ins-exp-2",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "CUBLAS_COMPUTE_16F is broken on sm_89 for fp16; must use CUBLAS_COMPUTE_32F.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625062205-431"
+    },
+    {
+      "id": "ins-exp-3",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root). All bottleneck claims relying on ncu stall metrics are unmeasured; only latency from CUDA events is available.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "Future rounds should not rely on ncu for stall attribution; use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625100527-448"
+    },
+    {
+      "id": "ins-exp-4",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "EVAL_BENCH_REF=false harness contract causes sol-execbench to skip reference timing, reporting speedup=0 for all candidates. The workflow interpreted this as total failure (all 6 attempts marked valid=false, reward=2, speedup=0) and declared convergence_status=stalled, masking real 1.02-1.04x speedups.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda"
+      },
+      "actionable_hint": "Future rounds must read per-candidate metrics.json directly (claimed_speedup field) or run with EVAL_BENCH_REF=true to get real speedups from the harness. Do not trust overall_speedup=1 as failure when EVAL_BENCH_REF=false.",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625114104-469"
+    },
+    {
+      "id": "ins-exp-5",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root); stall attribution is unavailable. Confirmed in round 1: bottleneck inferred from op shape + roofline + CUDA-event latency deltas, not ncu stall metrics.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "Do not rely on ncu for stall metrics on this host. Use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625144721-495"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "catalog": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-catalog.json",
+  "catalog_sha256": "7173412098173a54bc59a2a99b4f1ca11b7f6b23843d5e9e94fa0b0029e67d73",
+  "feasible_count": 0,
+  "feasible_workflows": [],
+  "input_mode": "task_directory",
+  "integration_pattern": "custom_simulator",
+  "missing_workflows": [],
+  "rejected_workflows": [
+    {
+      "directory": "KSearch",
+      "name": "ksearch-kernel-optimization",
+      "reasons": [
+        "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+      ]
+    },
+    {
+      "directory": "aiter-bpreshuffle-csv-tuning",
+      "name": "aiter-bpreshuffle-csv-tuning",
+      "reasons": [
+        "workflow evolution disabled; rejecting authored",
+        "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+      ]
+    },
+    {
+      "directory": "regime-aware-fusion-kernel-optimization",
+      "name": "regime-aware-fusion-kernel-optimization",
+      "reasons": [
+        "workflow evolution disabled; rejecting authored",
+        "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+      ]
+    },
+    {
+      "directory": "shape-specialization-kernel-optimization",
+      "name": "shape-specialization-kernel-optimization",
+      "reasons": [
+        "workflow evolution disabled; rejecting authored",
+        "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+      ]
+    }
+  ],
+  "requested_workflows": [],
+  "require_all_workflows": false,
+  "required_workflow_pool_size": 0,
+  "schema_version": 1,
+  "verdict": "pass",
+  "violations": []
+}

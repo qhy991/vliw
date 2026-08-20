@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "origin": "authored",
+  "checks": {
+    "node_check": "passed",
+    "has_meta": true,
+    "has_return": true,
+    "deterministic": true,
+    "candidate_type_authored": true,
+    "technique_id_valid": true,
+    "metadata_crosscheck": true
+  },
+  "technique": "vliw_bundle_packing",
+  "technique_status": "proposed"
+}

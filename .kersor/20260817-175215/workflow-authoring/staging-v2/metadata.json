@@ -1,0 +1,40 @@
+{
+  "candidate_type": "authored",
+  "technique": "vliw_bundle_packing",
+  "technique_status": "proposed",
+  "languages": ["python_reference"],
+  "backends": ["python"],
+  "integration_patterns": ["custom_simulator"],
+  "optimization_phases": ["workload_dispatch"],
+  "backend_portability": "explicit",
+  "fidelity_boundary": "registered_candidate",
+  "speedup_field": "overall_speedup",
+  "best_kernel_field": "best_kernel_code",
+  "topology": "pipeline",
+  "seed_contract": "iterative",
+  "method_category": "multi_stage_refinement",
+  "role": "optimizer",
+  "requires_harness": true,
+  "requires_ncu": false,
+  "experimental": false,
+  "probation": true,
+  "name": "vliw-bundle-packing-optimization",
+  "all_args": [
+    "kernel_path",
+    "evaluation_root",
+    "test_command",
+    "benchmark_command",
+    "baseline",
+    "model_mechanical",
+    "model_generation"
+  ],
+  "required_args": [
+    "kernel_path",
+    "evaluation_root",
+    "test_command",
+    "benchmark_command",
+    "baseline"
+  ],
+  "origin": "authored",
+  "status": "probation"
+}

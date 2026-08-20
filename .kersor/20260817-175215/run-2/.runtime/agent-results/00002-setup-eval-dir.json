@@ -1,0 +1,43 @@
+{
+  "output": {
+    "eval_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/candidates/candidate-1",
+    "created": true,
+    "sha256": "78993c2963b0ad838a858add2ea056b7294e425b6807f963cad7a91bac6c3b11",
+    "files_copied": [
+      "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/problem.py",
+      "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/tests/submission_tests.py",
+      "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/tests/frozen_problem.py"
+    ]
+  },
+  "thread_id": "01a01cf7-2cd5-7ad0-8416-e4213fd910fe",
+  "usage": {
+    "input_tokens": 94329,
+    "cached_input_tokens": 66816,
+    "output_tokens": 5000,
+    "total_tokens": 99329
+  },
+  "usage_observed": true,
+  "usage_complete": true,
+  "model_role": "profile",
+  "native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "thread_ids": [],
+    "status": "not-requested"
+  },
+  "isolation": {
+    "requested": null,
+    "effective": "fresh-process"
+  },
+  "artifacts": {
+    "final_message": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00002-setup-eval-dir.last-message.txt",
+    "schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00002-setup-eval-dir.schema.json",
+    "codex_output_schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00002-setup-eval-dir.codex-schema.json",
+    "schema_mode": "strict",
+    "schema_fallback_reason": null,
+    "schema_rejection": null,
+    "codex_events": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00002-setup-eval-dir.codex-events.jsonl",
+    "stderr": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00002-setup-eval-dir.stderr.log"
+  }
+}

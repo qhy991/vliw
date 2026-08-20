@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "evidence_warnings": [],
+  "round": 2,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215",
+  "catalog_path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-catalog.json",
+  "selector": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/scripts/select-workflow.sh",
+  "selected_workflow": {
+    "name": "vliw-bundle-packing-optimization-2",
+    "directory": "vliw-bundle-packing-optimization-2",
+    "role": "optimizer",
+    "candidate_type": "authored",
+    "base_workflow": null,
+    "proposal_binding_hash": "sha256:a51ef3d01b068dd939e5fe47eacadae78f98994bf3e797cd468d76167a79cad0",
+    "workflow_content_hash": "sha256:44b194f8f17876e826f5e9d74b223858dee772a4196d3f5a128eef9bb6016e00",
+    "experimental": false,
+    "topology": "pipeline",
+    "method_category": "multi_stage_refinement",
+    "fidelity_boundary": "registered_candidate",
+    "description": "VLIW bundle-packing and SIMD vectorization workflow for a custom-VLIW Python-simulator task: packs independent scalar operations into multi-slot VLIW instruction bundles (up to 12 ALU + 2 LOAD + 2 STORE + 1 FLOW + 6 VALU per cycle), then applies SIMD vectorization (VLEN=8 VALU) where the data layout permits. Uses a Session-local candidate copy with SHA-256 binding, runs the mandated correctness and benchmark commands, and returns the speedup and best kernel code.",
+    "when_to_use": "When the task is a custom-VLIW Python-simulator kernel optimization (language=python_reference, backend=python, integration_pattern=custom_simulator) whose baseline is a purely scalar, single-slot-per",
+    "score": 23,
+    "features": [
+      "eligible base: +10",
+      "optimizer role: +4",
+      "session-local workflow variant: +1",
+      "variant can react to prior stalled/failed evidence: +2",
+      "exact language compatibility: +4",
+      "exact backend compatibility: +2"
+    ],
+    "demoted": true,
+    "demotion_reasons": [
+      "workflow already selected in a previous round",
+      "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+    ]
+  },
+  "filter_dead_end": null,
+  "seed_mismatch": null,
+  "routing": {
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "decided_by": "fallback",
+    "fallback_pick": "vliw-bundle-packing-optimization-2",
+    "explored": false,
+    "propensity": {
+      "randomized": false,
+      "pi0": null,
+      "n_eligible": null,
+      "score_max": null
+    },
+    "rationale": ""
+  },
+  "attempt_plan": {
+    "schema_version": 1,
+    "round": 2,
+    "status": "committed",
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "fallback_workflow": "vliw-bundle-packing-optimization-2",
+    "commit": {
+      "status": "committed",
+      "workflow": "vliw-bundle-packing-optimization-2",
+      "decided_by": "fallback",
+      "rationale": ""
+    },
+    "evidence_signals": {
+      "transfer_file": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/round-1-transfer.json",
+      "prior_failed_strategy": true,
+      "prior_measured_bottleneck": false,
+      "prior_plateau": false,
+      "target_speedup": "8.0",
+      "warnings": []
+    },
+    "selection_policy": {
+      "deterministic_selector": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/scripts/select-workflow.sh",
+      "scoring": "Research Runner additive score",
+      "sort_key": "demoted asc, score desc, name asc",
+      "model_owns_choice": true,
+      "demotion_override_required": false,
+      "wsr_stats": null
+    },
+    "candidate_plans": [
+      {
+        "workflow": "vliw-bundle-packing-optimization-2",
+        "role": "optimizer",
+        "candidate_type": "authored",
+        "score": 23,
+        "demoted": true,
+        "demotion_reasons": [
+          "workflow already selected in a previous round",
+          "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+        ],
+        "rationale_features": [
+          "eligible base: +10",
+          "optimizer role: +4",
+          "session-local workflow variant: +1",
+          "variant can react to prior stalled/failed evidence: +2",
+          "exact language compatibility: +4",
+          "exact backend compatibility: +2"
+        ]
+      }
+    ]
+  },
+  "profile_features": {
+    "input_mode": "task_directory",
+    "language": "python_reference",
+    "backend": "python",
+    "operation_type": "",
+    "ncu_available": "unknown",
+    "has_harness": "unknown",
+    "in_git_repo": "true",
+    "bottleneck": "",
+    "complexity": "",
+    "design_space": "",
+    "shape_stability": "",
+    "problem_type": "python-kernel-optimization",
+    "optimization_phase": "unknown"
+  },
+  "scoring_rubric": "Research advice over hard-veto survivors. Demoted candidates remain visible to the constrained model.",
+  "candidates": [
+    {
+      "name": "vliw-bundle-packing-optimization-2",
+      "directory": "vliw-bundle-packing-optimization-2",
+      "role": "optimizer",
+      "candidate_type": "authored",
+      "base_workflow": null,
+      "proposal_binding_hash": "sha256:a51ef3d01b068dd939e5fe47eacadae78f98994bf3e797cd468d76167a79cad0",
+      "workflow_content_hash": "sha256:44b194f8f17876e826f5e9d74b223858dee772a4196d3f5a128eef9bb6016e00",
+      "experimental": false,
+      "topology": "pipeline",
+      "method_category": "multi_stage_refinement",
+      "fidelity_boundary": "registered_candidate",
+      "description": "VLIW bundle-packing and SIMD vectorization workflow for a custom-VLIW Python-simulator task: packs independent scalar operations into multi-slot VLIW instruction bundles (up to 12 ALU + 2 LOAD + 2 STORE + 1 FLOW + 6 VALU per cycle), then applies SIMD vectorization (VLEN=8 VALU) where the data layout permits. Uses a Session-local candidate copy with SHA-256 binding, runs the mandated correctness and benchmark commands, and returns the speedup and best kernel code.",
+      "when_to_use": "When the task is a custom-VLIW Python-simulator kernel optimization (language=python_reference, backend=python, integration_pattern=custom_simulator) whose baseline is a purely scalar, single-slot-per",
+      "score": 23,
+      "features": [
+        "eligible base: +10",
+        "optimizer role: +4",
+        "session-local workflow variant: +1",
+        "variant can react to prior stalled/failed evidence: +2",
+        "exact language compatibility: +4",
+        "exact backend compatibility: +2"
+      ],
+      "demoted": true,
+      "demotion_reasons": [
+        "workflow already selected in a previous round",
+        "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+      ]
+    }
+  ],
+  "rejected": []
+}

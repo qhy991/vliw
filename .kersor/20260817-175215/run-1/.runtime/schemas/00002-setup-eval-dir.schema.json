@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "eval_dir": {
+      "type": "string"
+    },
+    "created": {
+      "type": "boolean"
+    },
+    "sha256": {
+      "type": "string"
+    },
+    "files_copied": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "eval_dir",
+    "created",
+    "sha256"
+  ]
+}

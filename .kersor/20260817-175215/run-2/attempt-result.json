@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "workflow": "vliw-bundle-packing-optimization-2",
+  "outcome": {
+    "compiled": true,
+    "correct": true,
+    "convergence_status": "converged",
+    "failure_class": "none",
+    "failure_signature": null,
+    "failure_code": "none",
+    "failure_domain": "none",
+    "retry_disposition": "none",
+    "cost_bucket": "solver",
+    "failure_detail_source": "derived:outcome.failure_class",
+    "raw_failure_code": null
+  },
+  "metric_contract": {
+    "metric_name": "cycles",
+    "baseline_id": "cycles-self",
+    "baseline_latency_ms": 147734,
+    "candidate_latency_ms": 6896,
+    "harness_command": "python -c \"from tests.submission_tests import cycles; print('CYCLES:', cycles())\"",
+    "source_path": "run-2/output.json:overall_speedup",
+    "speedup": 21.423143851508122,
+    "speedup_source": "analysis.json:speedup",
+    "timing_method": null,
+    "aggregate_reduction": null,
+    "valid": true
+  },
+  "artifacts": {
+    "best_kernel": {
+      "path": "best-kernel/best.py",
+      "code": "from problem import HASH_STAGES, SCRATCH_SIZE, VLEN\n\n\nclass KernelBuilder:\n    def __init__(self):\n        self.instrs = []\n        self.scratch = {}\n        self.scratch_debug = {}\n        self.scratch_ptr = 0\n        self.const_map = {}\n        self._vector_const_map = {}\n\n    def debug_info(self):\n        from problem import DebugInfo\n        return DebugInfo(scratch_map=self.scratch_debug)\n\n    @staticmethod\n    def _slot_accesses(engine, slot):\n        \"\"\"Return (read addresses, written addresses) for dependency-aware packing.\"\"\"\n        reads = set()\n        writes = set()\n\n        def add_range(base, length=1, target=None):\n            collection = writes if target == \"write\" else reads\n            collection.update(range(base, base + length))\n\n        if engine == \"alu\":\n            _, dest, a1, a2 = slot\n            add_range(a1)\n            add_range(a2)\n            add_range(dest, target=\"write\")\n        elif engine == \"valu\":\n            if slot[0] == \"vbroadcast\":\n                _, dest, src = slot\n                add_range(src)\n                add_range(dest, VLEN, target=\"write\")\n            elif slot[0] == \"multiply_add\":\n                _, dest, a, b, c = slot\n                add_range(a, VLEN)\n                add_range(b, VLEN)\n                add_range(c, VLEN)\n                add_range(dest, VLEN, target=\"write\")\n            else:\n                _, dest, a1, a2 = slot\n                add_range(a1, VLEN)\n                add_range(a2, VLEN)\n                add_range(dest, VLEN, target=\"write\")\n        elif engine == \"load\":\n            op = slot[0]\n            if op == \"const\":\n                _, dest, _ = slot\n                add_range(dest, target=\"write\")\n            elif op == \"load\":\n                _, dest, addr = slot\n                add_range(addr)\n                add_range(dest, target=\"write\")\n            elif op == \"load_offset\":\n                _, dest, addr, offset = slot\n                add_range(addr + offset)\n                add_range(dest + offset, target=\"write\")\n            elif op == \"vload\":\n                _, dest, addr = slot\n                add_range(addr)\n                add_range(dest, VLEN, target=\"write\")\n        elif engine == \"store\":\n            _, addr, src = slot\n            add_range(addr)\n            if slot[0] == \"vstore\":\n                add_range(src, VLEN)\n            else:\n                add_range(src)\n        elif engine == \"flow\":\n            op = slot[0]\n            if op == \"select\":\n                _, dest, cond, a, b = slot\n                add_range(cond)\n                add_range(a)\n                add_range(b)\n                add_range(dest, target=\"write\")\n            elif op == \"vselect\":\n                _, dest, cond, a, b = slot\n                add_range(cond, VLEN)\n                add_range(a, VLEN)\n                add_range(b, VLEN)\n                add_range(dest, VLEN, target=\"write\")\n            elif op == \"add_imm\":\n                _, dest, src, _ = slot\n                add_range(src)\n                add_range(dest, target=\"write\")\n            elif op in (\"cond_jump\", \"cond_jump_rel\"):\n                add_range(slot[1])\n            elif op in (\"trace_write\", \"jump_indirect\", \"coreid\"):\n                if op != \"coreid\":\n                    add_range(slot[1])\n                else:\n                    add_range(slot[1], target=\"write\")\n            elif op not in (\"pause\", \"halt\", \"jump\"):\n                for value in slot[1:]:\n                    if isinstance(value, int):\n                        add_range(value)\n        elif engine == \"debug\":\n            if slot[0] in (\"compare\", \"vcompare\"):\n                add_range(slot[1], VLEN if slot[0] == \"vcompare\" else 1)\n\n        return reads, writes\n\n    def build(self, slots, vliw=False):\n        \"\"\"Pack a topologically ordered slot stream into legal VLIW bundles.\n\n        The scheduler never reorders slots. It only places a slot in the current\n        bundle when engine capacity and scratch read/write dependencies permit it.\n        This preserves the simulator's end-of-cycle write semantics while allowing\n        independent lanes and engines to issue together.\n        \"\"\"\n        if not vliw:\n            return [{engine: [slot]} for engine, slot in slots]\n\n        bundles = []\n        current = {}\n        current_reads = set()\n        current_writes = set()\n\n        def flush():\n            nonlocal current, current_reads, current_writes\n            if current:\n                bundles.append(current)\n            current = {}\n            current_reads = set()\n            current_writes = set()\n\n        for engine, slot in slots:\n            if engine == \"debug\":\n                flush()\n                bundles.append({\"debug\": [slot]})\n                continue\n\n            reads, writes = self._slot_accesses(engine, slot)\n            limit = {\"alu\": 12, \"valu\": 6, \"load\": 2, \"store\": 2, \"flow\": 1}.get(engine, 64)\n            engine_full = len(current.get(engine, [])) >= limit\n            hazard = bool(reads & current_writes) or bool(writes & current_reads) or bool(writes & current_writes)\n\n            if engine_full or hazard:\n                flush()\n\n            current.setdefault(engine, []).append(slot)\n            current_reads.update(reads)\n            current_writes.update(writes)\n\n        flush()\n        return bundles\n\n    def add(self, engine, slot):\n        self.instrs.append({engine: [slot]})\n\n    def alloc_scratch(self, name=None, length=1):\n        addr = self.scratch_ptr\n        if name is not None:\n            self.scratch[name] = addr\n            self.scratch_debug[addr] = (name, length)\n        self.scratch_ptr += length\n        assert self.scratch_ptr <= SCRATCH_SIZE, \"Out of scratch space\"\n        return addr\n\n    def scratch_const(self, val, name=None):\n        if val not in self.const_map:\n            addr = self.alloc_scratch(name)\n            self.add(\"load\", (\"const\", addr, val))\n            self.const_map[val] = addr\n        return self.const_map[val]\n\n    def vector_const(self, val):\n        if val not in self._vector_const_map:\n            scalar = self.scratch_const(val)\n            addr = self.alloc_scratch(length=VLEN)\n            self.add(\"valu\", (\"vbroadcast\", addr, scalar))\n            self._vector_const_map[val] = addr\n        return self._vector_const_map[val]\n\n    def build_hash(self, val_hash_addr, tmp1, tmp2, round, i):\n        slots = []\n        for hi, (op1, val1, op2, op3, val3) in enumerate(HASH_STAGES):\n            slots.append((\"alu\", (op1, tmp1, val_hash_addr, self.scratch_const(val1))))\n            slots.append((\"alu\", (op3, tmp2, val_hash_addr, self.scratch_const(val3))))\n            slots.append((\"alu\", (op2, val_hash_addr, tmp1, tmp2)))\n            slots.append((\"debug\", (\"compare\", val_hash_addr, (round, i, \"hash_stage\", hi))))\n        return slots\n\n    def build_kernel(self, forest_height: int, n_nodes: int, batch_size: int, rounds: int):\n        tmp = self.alloc_scratch(\"tmp\")\n        init_vars = [\n            \"rounds\", \"n_nodes\", \"batch_size\", \"forest_height\",\n            \"forest_values_p\", \"inp_indices_p\", \"inp_values_p\",\n        ]\n        for name in init_vars:\n            self.alloc_scratch(name)\n\n        init_slots = []\n        for i, name in enumerate(init_vars):\n            init_slots.append((\"load\", (\"const\", tmp, i)))\n            init_slots.append((\"load\", (\"load\", self.scratch[name], tmp)))\n        self.instrs.extend(self.build(init_slots, vliw=True))\n\n        one = self.scratch_const(1)\n        two = self.scratch_const(2)\n        batch_const = self.scratch_const(batch_size)\n        zero_vec = self.vector_const(0)\n        one_vec = self.vector_const(1)\n        two_vec = self.vector_const(2)\n        hash_vec_consts = {\n            value: self.vector_const(value)\n            for stage in HASH_STAGES\n            for value in (stage[1], stage[4])\n        }\n\n        self.instrs.append({\"flow\": [(\"pause\",)]})\n        self.instrs.append({\"debug\": [(\"comment\", \"Starting loop\")]})\n\n        groups = []\n        for start in range(0, batch_size, VLEN):\n            idx = self.alloc_scratch(length=VLEN)\n            val = self.alloc_scratch(length=VLEN)\n            gather = self.alloc_scratch(length=VLEN)\n            htmp = self.alloc_scratch(length=VLEN)\n            idx_addr = self.alloc_scratch()\n            val_addr = self.alloc_scratch()\n            groups.append((start, idx, val, gather, htmp, idx_addr, val_addr))\n\n        for round_index in range(rounds):\n            body = []\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"flow\", (\"add_imm\", idx_addr, self.scratch[\"inp_indices_p\"], start)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"alu\", (\"+\", val_addr, idx_addr, batch_const)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"load\", (\"vload\", idx, idx_addr)))\n                body.append((\"load\", (\"vload\", val, val_addr)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                for lane in range(VLEN):\n                    body.append((\"alu\", (\"+\", gather + lane, self.scratch[\"forest_values_p\"], idx + lane)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                for lane in range(VLEN):\n                    body.append((\"load\", (\"load\", gather + lane, gather + lane)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"valu\", (\"^\", val, val, gather)))\n            for op1, value1, op2, op3, value3 in HASH_STAGES:\n                for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                    body.append((\"valu\", (op1, htmp, val, hash_vec_consts[value1])))\n                    body.append((\"valu\", (op3, gather, val, hash_vec_consts[value3])))\n                for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                    body.append((\"valu\", (op2, val, htmp, gather)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"valu\", (\"%\", htmp, val, two_vec)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"valu\", (\"==\", htmp, htmp, zero_vec)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"flow\", (\"vselect\", gather, htmp, one_vec, two_vec)))\n                body.append((\"valu\", (\"*\", idx, idx, two_vec)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"valu\", (\"+\", idx, idx, gather)))\n            n_nodes_vec = self.vector_const(n_nodes)\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"valu\", (\"<\", htmp, idx, n_nodes_vec)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"flow\", (\"vselect\", idx, htmp, idx, zero_vec)))\n            for start, idx, val, gather, htmp, idx_addr, val_addr in groups:\n                body.append((\"store\", (\"vstore\", idx_addr, idx)))\n                body.append((\"store\", (\"vstore\", val_addr, val)))\n\n            self.instrs.extend(self.build(body, vliw=True))\n            self.instrs.append({\"flow\": [(\"pause\",)]})",
+      "path_source": "analysis.json:best_kernel",
+      "code_source": "output.json:best_kernel_code"
+    },
+    "has_best_kernel": true,
+    "iterations_completed": 8,
+    "iterations_source": "analysis.json:iterations_completed"
+  },
+  "transfer_items": [
+    {
+      "id": "win-1",
+      "kind": "validated_win",
+      "directive": "reuse",
+      "claim": "Dependency-aware VLIW bundle packing (greedy in-order packing of the topologically sorted slot stream with per-engine capacity limits alu=12/valu=6/load=2/store=2/flow=1 and RAW/WAR/WAW scratch-overlap flush, debug slots as barriers) combined with VALU vectorization of contiguous loads, hash stages, parity/child selection and stores across VLEN=8 lanes — with the irregular forest lookup kept as 8 scalar address+load ops gathered into one contiguous scratch range per group — cut cycles from 147734 to 6896 (21.4231x, target 8.0x)",
+      "evidence": "benchmark",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "shape": "forest_height=10, rounds=16, batch_size=256",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Keep the never-reordering greedy packer (capacity + hazard flush only) as the scheduling skeleton for any further variant: it preserves the simulator's end-of-cycle write semantics while filling all engines; further gains should come from reducing scalar gather count or reordering the phase-grouped stream, not from reordering within bundles.",
+      "technique": "instruction_scheduling",
+      "pointers": [
+        "run-2/output.json",
+        "run-2/analysis.md",
+        "best-kernel/best.py"
+      ]
+    },
+    {
+      "id": "env-1r",
+      "kind": "env_fact",
+      "directive": "gate",
+      "claim": "Round-1's env-1 interpreter gate is RESOLVED: with both eval commands pinned to the absolute path /Users/haiyan-infiniai/homebrew/bin/python3 the correctness suite ran clean (exit 0, 8/8 iterations, 6896 cycles each) and the benchmark emitted exactly one anchored CYCLES line — confirming the run-1 SyntaxError was purely the login-shell python3→/usr/bin/python3 3.9.6 match-statement parse failure, not a candidate property",
+      "evidence": "runtime",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "host": "darwin"
+      },
+      "actionable_hint": "Any future round of this session must keep invoking correctness and benchmark with the absolute /Users/haiyan-infiniai/homebrew/bin/python3 (Python 3.10+ required by frozen_problem.py's match statements); reverting to bare python3 through a login shell re-introduces the fail-closed parse error before candidate code runs.",
+      "pointers": [
+        "run-2/.runtime/agent-results/00003-correctness-test.json",
+        "run-2/.runtime/agent-results/00004-benchmark.json",
+        "run-2/preflight.json"
+      ]
+    },
+    {
+      "id": "con-1",
+      "kind": "search_constraint",
+      "directive": "constrain",
+      "claim": "The winning kernel assumes batch_size is VLEN-aligned (batch_size % 8 == 0): it tiles the batch into groups of 8 lanes with unmasked vload/vstore and vector bounds-wrapping; correctness is verified only at forest_height=10, rounds=16, batch_size=256 (32 full groups, no tail)",
+      "evidence": "correctness",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "shape": "forest_height=10, rounds=16, batch_size=256",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Before reusing this kernel at any non-VLEN-aligned batch_size, add a masked tail group or a scalar epilogue for the final batch_size % 8 lanes and re-run the 8-iteration correctness suite; scratch sizing (1536-word limit) must also be re-derived if rounds/groups change since per-group ranges are reused across rounds.",
+      "pointers": [
+        "best-kernel/best.py",
+        "run-2/output.json"
+      ]
+    },
+    {
+      "id": "ins-2",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "Remaining cycle cost is dominated by the ISA's lack of a vector gather: the data-dependent forest lookup costs 8 scalar address ALU ops + 8 scalar loads per vector group against a load-engine limit of 2 slots/cycle, so the 32-group × 16-round gather sequence is the main residual between the measured 6896 cycles and the ~2139-cycle design intent claimed (unmeasured) for the Aug-18 32x8-lane schedule",
+      "evidence": "benchmark",
+      "confidence": "inferred",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "shape": "forest_height=10, rounds=16, batch_size=256",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Attack the gather bound directly: precompute or cache forest node values across rounds where indices repeat, fold the address add into load_offset slots to free ALU issue slots, or restructure so multiple groups' scalar gathers interleave with vector hash work to saturate both load slots every cycle; validate each variant with the anchored CYCLES benchmark.",
+      "pointers": [
+        "run-2/output.json",
+        "run-2/analysis.md"
+      ]
+    }
+  ],
+  "partial_wins": [],
+  "notes": "Real run of vliw-bundle-packing-optimization-2 (6 agent calls: 3 replayed from resume — read-kernel-source, vliw-optimizer, setup-eval-dir; correctness/benchmark/verify executed live). Correctness PASSED (exit 0, unittest 'Ran 1 test ... OK', 8/8 kernel iterations at 6896 cycles each); benchmark exit 0 with exactly one anchored 'CYCLES: 6896' line; verify-candidate hash_matches=true (SHA-256 78993c2963b0ad838a858add2ea056b7294e425b6807f963cad7a91bac6c3b11 binds output.json:best_kernel_code == candidate-1/perf_takehome.py on disk). Speedup 147734/6896 = 21.423143851508122, deterministic per test-method.md rule 9. convergence_status=converged: the round produced a measured, correctness-verified win that exceeds the session target_speedup=8.0 (2.68x the target); 'converged' is the in-vocabulary canonical form (attempt.py _CONVERGENCE_ALIASES maps target_met/improved/success -> converged; the closed set is {converged, budget_exhausted, stalled, error, unknown}). baseline_id=cycles-self: test-method.md has no external 'Baseline:' field — the baseline is the session's own frozen cycle count (147734), self-referential; baseline_latency_ms/candidate_latency_ms carry cycle counts, not milliseconds (metric_name=cycles). incumbent was the 1.0x starter kernel; candidate_speedup is this round's product, best_improved=true. best_kernel points at the validate-run materialized best-kernel/best.py; materialization appended one trailing newline (11408 vs 11407 bytes) so the on-disk file's sha256 (a6441b10...) differs from the returned code string's sha only for that reason — the RETURNED string hashes to the claimed 78993c29...; post-hoc clean-copy re-verification reproduced correctness exit 0 (8/8, 6896) and CYCLES 6896 -> 21.423x. Re-verified post-hoc reproduction was host-side validation, not a mark-reproduction run; the small-win reproduction gate is skipped because 21.42x is far above the 1.10x noise band. bottleneck_class=unknown and achieved_matrix_util=null: the deterministic roofline/matrix-lever layer does not apply to this CPU-hosted VLIW simulator (backend=python, no GPU, no matrix unit); the structural bottleneck claim lives in transfer item ins-2. infrastructure_failure=false (no infra code): all phases completed, both commands exited 0. Round-1 transfer directives honored: env-1 interpreter pin (absolute Homebrew python3 on both commands), fail-1 complete-module preamble (candidate starts 'from problem import HASH_STAGES, SCRATCH_SIZE, VLEN'), ins-r1d-1 re-derivation of the 32x8-lane vectorized design (realized as measured 6896 vs the unverified ~2139 claim). Usage per .runtime/summary.json: 740,072 total tokens (713,978 input / 504,064 cached / 26,094 output), budget charge 183,587 tokens, dispatch_wall_seconds 484.34, no GPU time (simulator task).",
+  "reported": {
+    "speedup": 21.423143851508122,
+    "speedup_source": "output.json:overall_speedup",
+    "baseline_score": null,
+    "baseline_score_source": null,
+    "baseline_latency_ms": null,
+    "baseline_latency_source": null,
+    "candidate_latency_ms": null,
+    "candidate_latency_source": null,
+    "baseline_id": null,
+    "hardware": null
+  },
+  "environment": {
+    "hardware": null
+  },
+  "resources": {
+    "gpu_time_seconds": null,
+    "gpu_time_source": null,
+    "accelerator_time": {
+      "status": "unavailable",
+      "busy_seconds": null,
+      "wall_seconds": 0.000118,
+      "method": null,
+      "quality": "unavailable",
+      "scope": null,
+      "backend": null,
+      "devices": [],
+      "coverage_ratio": 0.0,
+      "sample_count": 0,
+      "source": ".runtime/accelerator-activity-codex-35425.json",
+      "reason": "sampler_unavailable"
+    },
+    "token_count": 740072,
+    "token_count_source": ".runtime/summary.json:cumulative_usage.total_tokens",
+    "dispatch_wall_seconds": 484.34,
+    "dispatch_wall_source": ".runtime/summary.json:dispatch_wall_seconds",
+    "achieved_mfu": null,
+    "achieved_mfu_source": null,
+    "achieved_matrix_util": null,
+    "achieved_matrix_util_source": null
+  },
+  "optimization": {
+    "incumbent_speedup": 1.0,
+    "candidate_speedup": 21.423143851508122,
+    "incumbent_speedup_source": "analysis.json:incumbent_speedup",
+    "candidate_speedup_source": "analysis.json:candidate_speedup",
+    "best_improved": true,
+    "candidate_source": "workflow-authoring/candidates/candidate-1/perf_takehome.py"
+  },
+  "coverage": {
+    "passed_workloads": null,
+    "total_workloads": null,
+    "regime_breakdown": null,
+    "dispatch": {
+      "dispatch_rule": null,
+      "variants": null,
+      "per_regime_metrics": null
+    }
+  },
+  "reproduction": null
+}

@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "stdout": {
+      "type": "string"
+    },
+    "stderr": {
+      "type": "string"
+    },
+    "exit_code": {
+      "type": "number"
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "stdout",
+    "stderr",
+    "exit_code",
+    "passed"
+  ]
+}

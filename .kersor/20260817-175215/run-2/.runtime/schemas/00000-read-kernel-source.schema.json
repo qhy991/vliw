@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "kernel_source": {
+      "type": "string"
+    },
+    "problem_source": {
+      "type": "string"
+    },
+    "test_source": {
+      "type": "string"
+    },
+    "frozen_problem_source": {
+      "type": "string"
+    },
+    "analysis": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kernel_source",
+    "problem_source",
+    "test_source"
+  ]
+}

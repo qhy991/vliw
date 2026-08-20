@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "session_id": "",
+  "round": 1,
+  "experiment_key": "b5b3c61c7720",
+  "identity": {
+    "op": "unknown",
+    "op_family": "unknown",
+    "kersor_version": "2.3.1",
+    "language": "python_reference",
+    "backend": "python",
+    "hardware": "python",
+    "model": "GLM-5.3",
+    "baseline_id": "cycles-self",
+    "integration_pattern": "custom_simulator",
+    "target_speedup": 8.0,
+    "transfer_mode": "full"
+  },
+  "context": {
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "design_space": "",
+    "bottleneck_class": "",
+    "evidence_mode": "none",
+    "profile_available": false,
+    "headroom_ratio": null,
+    "ceiling_source": null
+  },
+  "agent_judgment": {
+    "blind_confidence_present": false,
+    "blind_confidence_expected": false,
+    "blind_confidence_leak": false,
+    "candidate_fit": [],
+    "chosen_blind": null,
+    "rationale_text": null,
+    "reason_codes": []
+  },
+  "selection": {
+    "fallback_pick": "vliw-bundle-packing-optimization-2",
+    "chosen_workflow": "vliw-bundle-packing-optimization-2",
+    "decided_by": "fallback",
+    "selection_source": "round_selection",
+    "propensity": {
+      "policy": "deterministic-fallback",
+      "pi0": 1.0,
+      "randomized": false,
+      "n_eligible": 1,
+      "score_max": null
+    },
+    "beta_agent": null
+  },
+  "outcome": {
+    "has_ledger": true,
+    "outcome_status": "aborted",
+    "round_speedup": null,
+    "best_so_far": null,
+    "best_delta": null,
+    "improved": false,
+    "candidate_improved": false,
+    "learning_eligible": true,
+    "learning_eligibility_reason": "candidate_contribution_proven",
+    "lever_satisfied": null,
+    "reward_source": "optimization.best_improved",
+    "has_target": true,
+    "met_target": null,
+    "valid_measured": false,
+    "decision": "CONTINUE",
+    "failure_mode": "correctness_mismatch",
+    "failure_signature": "correctness_mismatch:7516fe0d9c",
+    "failure_code": "correctness_mismatch",
+    "retry_disposition": "change_candidate",
+    "cost_bucket": "solver",
+    "dispatch_wall_seconds": 872.196,
+    "token_count": 1404256,
+    "accelerator_busy_seconds": null,
+    "accelerator_time_status": "unavailable",
+    "accelerator_time_quality": "unavailable",
+    "accelerator_time_method": null,
+    "achieved_mfu": null
+  }
+}

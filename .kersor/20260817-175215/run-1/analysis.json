@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "workflow": "vliw-bundle-packing-optimization-2",
+  "compiled": true,
+  "correct": false,
+  "speedup": null,
+  "metric_name": "cycles",
+  "baseline_id": "cycles-self",
+  "baseline_latency_ms": 147734,
+  "candidate_latency_ms": null,
+  "harness_command": "python -c \"from tests.submission_tests import cycles; print('CYCLES:', cycles())\"",
+  "source_path": "run-1/output.json:overall_speedup",
+  "best_kernel": "workflow-authoring/candidates/candidate-0/perf_takehome.py",
+  "has_best_kernel": true,
+  "iterations_completed": 1,
+  "convergence_status": "error",
+  "infrastructure_failure": false,
+  "error": "Correctness FAILED exit 1: candidate perf_takehome.py was emitted as a bare class body (starts at `class KernelBuilder:`) without the `from problem import (...)` preamble, so SCRATCH_SIZE/VLEN/Engine/DebugInfo/HASH_STAGES are undefined and build_kernel raises NameError: SCRATCH_SIZE at perf_takehome.py:136 on the first alloc_scratch call",
+  "bottleneck_class": "unknown",
+  "achieved_matrix_util": null,
+  "incumbent_speedup": 1.0,
+  "candidate_speedup": null,
+  "best_improved": false,
+  "candidate_source": "workflow-authoring/candidates/candidate-0/perf_takehome.py",
+  "transfer_items": [
+    {
+      "id": "fail-1",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "Generated kernel was emitted as a bare class body starting at `class KernelBuilder:` — the module docstring and the required `from problem import (Engine, DebugInfo, SLOT_LIMITS, VLEN, N_CORES, SCRATCH_SIZE, Machine, Tree, Input, HASH_STAGES, ...)` preamble were dropped, so every problem-module symbol is undefined and build_kernel dies with NameError: SCRATCH_SIZE at perf_takehome.py:136 during the first alloc_scratch call",
+      "evidence": "correctness",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Emit the candidate as a COMPLETE file: preserve the original module docstring and the exact `from problem import (...)` preamble before `class KernelBuilder:`. Before invoking the correctness suite, smoke-validate the artifact with `python3 -c \"import perf_takehome\"` and a 1-round build_kernel call so a preamble omission is caught in-phase rather than burning the eval cycle.",
+      "pointers": [
+        "run-1/output.json",
+        "run-1/analysis.md",
+        "run-1/.runtime/agent-results/00001-vliw-optimizer.json"
+      ]
+    },
+    {
+      "id": "env-1",
+      "kind": "env_fact",
+      "directive": "gate",
+      "claim": "The Evaluate correctness agent ran the test via `/bin/zsh -lc 'python3 tests/submission_tests.py ...'`, where login-shell PATH resolves python3 to /usr/bin/python3 3.9.6; frozen_problem.py uses `match op:` (Python 3.10+ syntax), so the recorded failure is a SyntaxError at frozen_problem.py:222 at import time — under this invocation ANY candidate, including a correct one, fails before the candidate is ever exercised. Re-run under Python 3.14 reaches the candidate and reveals the true defect (NameError: SCRATCH_SIZE at perf_takehome.py:136)",
+      "evidence": "runtime",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "host": "darwin"
+      },
+      "actionable_hint": "Pin the eval interpreter: the workflow's Evaluate phase must invoke both the correctness and benchmark commands with an absolute Python 3.10+ path (e.g. /Users/haiyan-infiniai/homebrew/bin/python3) or an explicit PATH prefix, never bare `python3` through a login shell, or every future candidate will be fail-closed on the frozen problem's match-statement syntax before its own code runs.",
+      "pointers": [
+        "run-1/.runtime/agent-results/00003-correctness-test.json",
+        "run-1/.runtime/agent-results/00003-correctness-test.last-message.txt",
+        "run-1/analysis.md"
+      ]
+    },
+    {
+      "id": "ins-1",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "The starter kernel is fully scalar and serial — one engine slot per bundle — while the machine offers 12 alu / 6 valu / 2 load / 2 store / 1 flow slots per cycle; the irregular per-lane forest gather (vload is contiguous-address-only, no lane-extract or gather op in the ISA) blocks full vectorization, so the main cycle lever is cross-lane VLIW parallelism packed around the unavoidable scalar gather and data-dependent hash",
+      "evidence": "llm_inferred",
+      "confidence": "inferred",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "shape": "forest_height=10, rounds=16, batch_size=256",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Give each batch lane private scratch registers and dependency-scoreboard-pack independent lanes into shared bundles (reject same-cycle producer-consumer and write-write hazards); vectorize only the contiguous index/value loads and lane-wise hash/branch arithmetic with vload/vstore/valu, keep hash constants deduplicated in scratch, and preserve debug compares as zero-cycle ordering barriers.",
+      "pointers": [
+        "run-1/.runtime/agent-results/00000-read-kernel-source.json",
+        "run-1/output.json"
+      ]
+    }
+  ],
+  "raw_speedup_field": "overall_speedup",
+  "raw_speedup_value": null,
+  "partial_wins": [],
+  "regime_breakdown": null,
+  "notes": "Real run of vliw-bundle-packing-optimization-2 (4 agent calls, all phases completed: Analyze -> Bundle-And-Vectorize -> Evaluate -> Report). Fail-closed contract fired: correctness exit 1, overall_speedup=null, benchmark intentionally not run, so speedup stays null and no post-generation measurement was made (candidate is incorrect). Candidate SHA-256 binding verified on disk (perf_takehome.py in candidate-0 == ca85242791ee171d0b617f326c13414cbdfc96eba772d26a67263dd9aabdeac5). Candidate defect, not infrastructure: the missing import preamble is a property of the generated code; infrastructure_failure is false and no infra code is emitted. The workflow-recorded stderr (SyntaxError: match op at frozen_problem.py:222) is the interpreter surface of the same failed check: the correctness agent's /bin/zsh -lc resolved python3 to 3.9.6 which cannot parse the frozen problem; under Python 3.14 the same command reaches build_kernel and fails with the candidate's own NameError (both surfaces reproduced on-host post-hoc for diagnosis only). Baseline is the session's own frozen cycle count (147734 cycles, self-referential -> baseline_id=cycles-self); baseline_latency_ms carries cycles, not milliseconds. bottleneck_class unknown: deterministic roofline layer does not apply to this CPU-hosted VLIW simulator task (no GPU, no matrix unit); the structural bottleneck claim lives in transfer item ins-1. Usage (this run's completed workflow): 662,130 total tokens (642,802 input / 470,528 cached / 19,328 output) per .runtime/summary.json; dispatch_wall_seconds 872.196; no GPU time (simulator task)."
+}

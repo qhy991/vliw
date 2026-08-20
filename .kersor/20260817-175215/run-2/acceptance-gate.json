@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "verdict": "pass",
+  "checks": [
+    {
+      "name": "outcome",
+      "result": "pass"
+    },
+    {
+      "name": "metric_contract",
+      "result": "pass"
+    },
+    {
+      "name": "metric_kind",
+      "result": "skip",
+      "reason": "timing_method not recorded; cannot prove pytest-wall"
+    },
+    {
+      "name": "fair_baseline",
+      "result": "skip",
+      "reason": "no frozen contract.env::baseline_id"
+    },
+    {
+      "name": "target_gpu",
+      "result": "skip",
+      "reason": "no target GPU recorded (roofline-target.json::gpu / contract.env::target_gpu absent)"
+    },
+    {
+      "name": "workload_coverage",
+      "result": "skip",
+      "reason": "workload matrix not recorded in Attempt Result; cannot prove incomplete coverage"
+    },
+    {
+      "name": "regime_regression",
+      "result": "skip",
+      "policy": "enforced",
+      "reason": "regime_breakdown not recorded in Attempt Result; cannot prove a regime regression"
+    },
+    {
+      "name": "measurement_provenance",
+      "result": "pass",
+      "recomputed_speedup": 21.423143851508122
+    },
+    {
+      "name": "artifact_measurement_binding",
+      "result": "skip",
+      "reason": "workflow did not require immutable artifact binding"
+    },
+    {
+      "name": "optimizer_contribution",
+      "result": "skip",
+      "reason": "stable delivery session or no provided warm-start seed"
+    },
+    {
+      "name": "measured_lever",
+      "result": "skip",
+      "reason": "no prior measured lever gate"
+    },
+    {
+      "name": "target",
+      "result": "pass",
+      "speedup": 21.423143851508122,
+      "target": 8.0
+    }
+  ],
+  "appeal": {
+    "status": "degraded",
+    "rule_verdict": "pass",
+    "decision": "confirm",
+    "category": "other",
+    "evidence_refs": [],
+    "reasoning": "ask-cc unavailable or unparseable; deterministic rule verdict applied",
+    "confidence": "low",
+    "reviewer_skill_dir": null
+  }
+}

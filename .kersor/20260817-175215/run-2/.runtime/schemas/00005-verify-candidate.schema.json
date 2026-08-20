@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "hash": {
+      "type": "string"
+    },
+    "hash_matches": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "source",
+    "hash",
+    "hash_matches"
+  ]
+}

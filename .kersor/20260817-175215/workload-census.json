@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "workload_count": 0,
+  "axes": [],
+  "regimes": [],
+  "coverage": {
+    "classified": 0,
+    "unclassified": 0,
+    "reason": "no concrete workloads and no definition.json \u2014 census cannot name regimes; solver should treat the workload distribution as unknown"
+  },
+  "source": null
+}

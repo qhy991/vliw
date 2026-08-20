@@ -1,0 +1,1 @@
+{"enabled":true,"blocked":false,"checks":[{"check":"input_exists","key":"kernel_path","verdict":"pass","value":"/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/perf_takehome.py"},{"check":"harness_executable","key":"benchmark_command","verdict":"pass","value":"python3"},{"check":"harness_executable","key":"test_command","verdict":"pass","value":"python3"}]}

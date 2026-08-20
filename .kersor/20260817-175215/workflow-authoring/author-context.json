@@ -1,0 +1,457 @@
+{
+  "authoring_contract": {
+    "candidate_evaluation_root": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/candidates",
+    "candidate_type": "authored",
+    "canonical_task_source": "read_only",
+    "handoff_seal": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/author-handoff.json",
+    "one_technique_required": true,
+    "probation": true,
+    "required_direct_files": [
+      "workflow.js",
+      "metadata.json",
+      "rationale.md"
+    ],
+    "store": "workflows/proposals"
+  },
+  "dispatch": {
+    "description": "Author one KerSor workflow proposal",
+    "prompt": "Read and obey the complete workflow-author role at:\n/Users/haiyan-infiniai/Agent4Kernel/KerSor/agents/workflow-author.md\n\nYour only inputs are:\nSTAGING_DIR=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/staging\nAUTHOR_CONTEXT=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/author-context.json\n\nRead AUTHOR_CONTEXT and every owner named by the role before writing. Write\nexactly the three direct author files into STAGING_DIR. The canonical task\nsource is read-only; candidate evaluation must use a Session-local copy and\nbind correctness plus benchmark evidence to that exact candidate. Do not use\nor infer a parent-supplied metadata template. The role file and AUTHOR_CONTEXT\nare the only authoring contract.\n",
+    "run_in_background": false
+  },
+  "existing_workflows": [
+    {
+      "accepted_problem_types": [
+        "gpu-kernel-optimization",
+        "kernel-search"
+      ],
+      "accepts_constraints": [],
+      "all_args": [
+        "sol_cli",
+        "sol_task_dir",
+        "sol_bench_config",
+        "sol_seed_dir",
+        "sol_cuda_visible_devices",
+        "sol_ld_library_path",
+        "sol_env_prefix",
+        "sol_definition_path",
+        "sol_substrate_dir"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": true,
+      "backend_portability": "any",
+      "backends": [
+        "ascend",
+        "triton",
+        "cuda",
+        "python",
+        "metax"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "existing_workflow",
+      "default_backend": "triton",
+      "description": "World-model-guided tree search for GPU kernel optimization (K-Search methodology)",
+      "directory": "KSearch",
+      "experimental": false,
+      "fidelity_boundary": "high_fidelity_method_translation",
+      "integration_patterns": [
+        "standalone",
+        "embedded_dispatch",
+        "embedded_inplace",
+        "sol_execbench_solution"
+      ],
+      "js_path": "KSearch/ksearch-kernel-optimization.js",
+      "known_broken": null,
+      "languages": [
+        "cuda",
+        "triton",
+        "ascendc",
+        "python_reference",
+        "metax"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "manifest",
+      "method_category": "tree_exploration",
+      "name": "ksearch-kernel-optimization",
+      "optimization_phases": [
+        "unknown"
+      ],
+      "platform": null,
+      "portability": "clean",
+      "probation": false,
+      "proposal_binding_hash": null,
+      "proposal_status": null,
+      "required_args": [
+        "problem_path"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "hybrid",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "speedup_over_baseline",
+      "supports_partial_patch": false,
+      "topology": "tree",
+      "validation_path": null,
+      "when_to_use": "When you need to explore a large kernel design space systematically rather than iterating on a single optimization path. Uses a co-evolving decision tree (world model) to track hypotheses, guide actio",
+      "workflow_content_hash": null
+    },
+    {
+      "accepted_problem_types": [
+        "framework-tuning",
+        "rocm-kernel-optimization",
+        "gpu-kernel-optimization",
+        "kernel-optimization"
+      ],
+      "accepts_constraints": [],
+      "all_args": [
+        "benchmark_command",
+        "csv_path",
+        "exp_dir",
+        "model_judgment",
+        "model_mechanical",
+        "model_profile",
+        "shapes",
+        "target_arch",
+        "wall_time_per_shape_min"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "rocm"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_path",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Tune AITER a8w8_blockscale bpreshuffle CSV entries for a target GPU + shape set by delegating to aiter.jit.tune_gemm, then verifying via the task benchmark harness. Fills the registry-dispatch / framework-tuning gap where the optimizable unit is a config CSV, not a kernel source.",
+      "directory": "aiter-bpreshuffle-csv-tuning",
+      "experimental": false,
+      "fidelity_boundary": "reversible-config-edit",
+      "integration_patterns": [
+        "registry_dispatch"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/aiter-bpreshuffle-csv-tuning/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "python_reference"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "config_tuning",
+      "name": "aiter-bpreshuffle-csv-tuning",
+      "optimization_phases": [
+        "unknown"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:f760a325d78500b739a5d59c5ec21ae2e3a9ea78aca1d39312a9093d2cd6b27e",
+      "proposal_status": "probation",
+      "required_args": [
+        "benchmark_command",
+        "csv_path",
+        "exp_dir",
+        "shapes",
+        "target_arch"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "unknown",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "pipeline",
+      "validation_path": null,
+      "when_to_use": "ROCm framework-tuning tasks whose kernel_path is a Python harness that dispatches into AITER (integration_pattern=registry_dispatch); optimization is populating tuned CSV rows for gfx942 (or other AIT",
+      "workflow_content_hash": "sha256:49124f4c69961c2554fd1179ea05bfd9393ddc8c6214d731f147400332bbd016"
+    },
+    {
+      "accepted_problem_types": [],
+      "accepts_constraints": [],
+      "all_args": [
+        "exp_dir",
+        "correctness_command",
+        "benchmark_command",
+        "kernel_path",
+        "task_dir",
+        "solution_schema_path",
+        "hidden_size",
+        "eps",
+        "workloads",
+        "language",
+        "backend",
+        "target_gpu",
+        "launch_overhead_batch_threshold",
+        "bandwidth_batch_threshold",
+        "rtol",
+        "atol",
+        "matched_ratio",
+        "model_mechanical",
+        "model_profile",
+        "model_judgment"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "cuda"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Regime-aware operator-fusion workflow for a fused residual-add+RMSNorm sol-execbench task: fuses the reference\\",
+      "directory": "regime-aware-fusion-kernel-optimization",
+      "experimental": false,
+      "fidelity_boundary": "strict_high_fidelity",
+      "integration_patterns": [
+        "sol_execbench_solution"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/regime-aware-fusion-kernel-optimization/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "cuda"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "multi_stage_refinement",
+      "name": "regime-aware-fusion-kernel-optimization",
+      "optimization_phases": [
+        "backend_native"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:21dfc9b2bd0b46b096fef648cb29188e48462d0fa14b5fe52913b7838ba31c88",
+      "proposal_status": "probation",
+      "required_args": [],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "unknown",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "pipeline",
+      "validation_path": null,
+      "when_to_use": "When a sol-execbench (or similarly harness-graded) task profile shows an unfused, multi-kernel elementwise+reduction chain (e.g. fused add+RMSNorm) whose live-measured latency is flat/launch-overhead-",
+      "workflow_content_hash": "sha256:bff7f08db6b1c8adcdec925fcd434dbe1af8a29d8e19a3e496c255bc67e15bf4"
+    },
+    {
+      "accepted_problem_types": [],
+      "accepts_constraints": [],
+      "all_args": [
+        "kernel_path",
+        "exp_dir",
+        "test_command",
+        "benchmark_command",
+        "target_gpu",
+        "op_description",
+        "shape_stability",
+        "shapes",
+        "round_num"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "cuda"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Shape-specialization solver: collapses every statically-known runtime dimension into a compile-time constant (constexpr) with static_assert invariants, dropping dynamic dispatch branches. Wins when the task shape space is fixed or a small enumerable set (e.g. a task directory workloads.json). Falls back honestly \u2014 reports a capability gap rather than silently degrading to a slower dynamic kernel \u2014 when the workload set is unbounded.",
+      "directory": "shape-specialization-kernel-optimization",
+      "experimental": false,
+      "fidelity_boundary": "compile_time_constants",
+      "integration_patterns": [
+        "standalone"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/shape-specialization-kernel-optimization/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "cuda"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "spec_to_kernel",
+      "name": "shape-specialization-kernel-optimization",
+      "optimization_phases": [
+        "backend_native"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:155cba3cca11fb3d5f6fe93fbc83ae96eab20592b2e61c25ef463995005ca3e6",
+      "proposal_status": "probation",
+      "required_args": [
+        "kernel_path"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "iterative",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "specialization",
+      "validation_path": null,
+      "when_to_use": "When kernel-profile.md declares Shape Stability: fixed or enumerable (a single concrete shape or a small closed set from workloads.json / test-method.md) and the seed kernel is a general-purpose dynam",
+      "workflow_content_hash": "sha256:f82a86eb95c6b28d60b4c39c7fc3c0a29f7ccb88e472c189ebbb38cf8d74e8f6"
+    }
+  ],
+  "routing_gap": {
+    "candidates": [],
+    "rejected": [
+      {
+        "directory": "KSearch",
+        "name": "ksearch-kernel-optimization",
+        "reasons": [
+          "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+        ]
+      },
+      {
+        "directory": "aiter-bpreshuffle-csv-tuning",
+        "name": "aiter-bpreshuffle-csv-tuning",
+        "reasons": [
+          "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+        ]
+      },
+      {
+        "directory": "regime-aware-fusion-kernel-optimization",
+        "name": "regime-aware-fusion-kernel-optimization",
+        "reasons": [
+          "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+        ]
+      },
+      {
+        "directory": "shape-specialization-kernel-optimization",
+        "name": "shape-specialization-kernel-optimization",
+        "reasons": [
+          "integration_pattern mismatch: input=custom_simulator (workflow cannot register into this build system)"
+        ]
+      }
+    ],
+    "round": 1,
+    "selected_workflow": "STALLED"
+  },
+  "schema_version": 1,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215",
+  "task": {
+    "backend": "python",
+    "integration_pattern": "custom_simulator",
+    "kernel_profile": "# Kernel Profile: VLIW SIMD Forest Kernel\n\n## General\n- **Kernel**: `KernelBuilder.build_kernel()` in `perf_takehome.py`\n- **Language**: python_reference (Python DSL that generates VLIW instructions)\n- **Backend**: python (custom simulator)\n- **Operation Type**: custom_vliw_kernel\n- **Input**: forest_height=10, rounds=16, batch_size=256\n\n## Kernel Characteristics\n- **Instruction generation**: Builds a list of VLIW instruction bundles\n- **Current strategy**: 1 slot per instruction bundle (no bundling)\n- **Instruction count**: ~147734 bundles (one per cycle)\n- **Scratch usage**: ~20 scratch variables (within 1536 limit)\n- **Control flow**: Single loop nest (rounds \u00d7 batch_size), no branches per iteration\n\n## Bottleneck Analysis\n- **Primary bottleneck**: Slot utilization \u2014 each cycle executes only 1 slot out of potentially 24+ available (12 ALU + 2 LOAD + 2 STORE + 1 FLOW + 6 VALU = 23 slots max)\n- **Secondary bottleneck**: No SIMD vectorization \u2014 all operations are scalar\n- **Tertiary**: No scratch reuse optimization \u2014 many redundant loads of constants\n\n## Key Operations per Iteration\nPer (round, batch_element):\n- 2 LOAD (load index, load value)\n- 1 LOAD (load node value from forest)\n- 1 ALU XOR\n- ~4\u00d74=16 ALU ops for hash stages\n- 2 ALU + 1 FLOW for modulus/even-check\n- 2 ALU for next_idx computation\n- 1 ALU + 1 FLOW for wrap check\n- 2 STORE (store index, store value)\n- ~10+ ALU/LOAD for address computation and constant loading\n\n## Optimization Directions\n1. **VLIW Bundling**: Pack multiple slots per cycle (e.g., 2 LOAD + 2 ALU + 1 STORE per cycle)\n2. **SIMD Vectorization**: Use VALU to process VLEN=8 elements at once where possible\n3. **Scratch optimization**: Pre-compute and reuse constants, avoid redundant loads\n4. **Pipeline**: Overlap loop iterations across the round/batch structure\n\n## Complexity Level\n- **Algorithmic**: Low (simple tree traversal + hash)\n- **Implementation**: Medium (custom VLIW ISA, requires understanding of slot limits)\n- **Design Space**: Medium (many bundling strategies, vectorization choices)\n\n## NCU Available\n- N/A (custom simulator, not GPU)\n\n## Has Harness\n- Yes (Python unittest via `tests/submission_tests.py`)",
+    "language": "python_reference",
+    "target_speedup": "8.0",
+    "test_method": "# Test Method\n\n## Task\nVLIW SIMD architecture kernel optimization (Anthropic Performance Engineering Take-home).\n\nOptimize `KernelBuilder.build_kernel()` in `perf_takehome.py` to minimize cycles on a custom VLIW simulator.\n\n## Environment\n- **Architecture**: Custom VLIW SIMD with engines: alu(12 slots), valu(6), load(2), store(2), flow(1), debug(64)\n- **VLEN**: 8 (SIMD vector length)\n- **N_CORES**: 1\n- **Scratch size**: 1536 words\n- **Baseline cycles**: 147734\n- **Target speedup**: 8.0x (target cycles: ~18467)\n- **Python**: 3.x\n\n## Correctness Command\n```\npython tests/submission_tests.py CorrectnessTests.test_kernel_correctness\n```\nRuns 8 iterations of the kernel with `forest_height=10, rounds=16, batch_size=256` and verifies output values match the reference kernel.\n\n## Benchmark Command\n```\npython -c \"from tests.submission_tests import cycles; print('CYCLES:', cycles())\"\n```\nRuns a single benchmark iteration with `forest_height=10, rounds=16, batch_size=256` and reports cycles.\n\n## Baseline Status: present\n\n## Baseline Evidence\n- **Correctness**: PASS (exit 0, 8/8 iterations correct, all 147734 cycles)\n- **Benchmark**: 147734 cycles (speedup 1.0x over baseline of 147734)\n- **Exit status**: Correctness exit 0, Benchmark exit 0\n- **Stdout excerpt (correctness)**: `.....\\n----------------------------------------------------------------------\\nRan 1 test in 4.828s\\n\\nOK`\n- **Stdout excerpt (benchmark)**: `Testing forest_height=10, rounds=16, batch_size=256\\nCYCLES: 147734\\nSpeedup over baseline: 1.0`\n\n## Evaluation Rules (from user note)\n1. One unique Session-local evaluation directory per run with exclusive creation\n2. Canonical source read-only: `perf_takehome.py`, `problem.py`, `tests/`\n3. Prove realpath containment with `path.relative` (no string-prefix checks)\n4. Copy `problem.py` as `problem.py`, `tests/` as `tests/`, write candidate as `perf_takehome.py`\n5. SHA-256 binding: generated bytes == persisted bytes == winner bytes\n6. Execute exact commands with separate stdout/stderr, exit status, signal, error, cwd\n7. Correctness: exit 0 only\n8. Benchmark: exit 0 + exactly one `CYCLES: <int>` line\n9. Speedup = baseline / cycles (deterministic, never from agent report)\n10. On any failure: `overall_speedup=null`, `best_kernel_code=\"\"`\n11. Evidence binds candidate path, all SHA-256, both commands and their SHA-256, cwd, status, signal, error, full stdout/stderr\n\n## Confirmation Needed\n- None",
+    "user_note": "Authoring acceptance is fail-closed. The sole foreground workflow-author must write exactly workflow.js, metadata.json, and rationale.md; the parent may only seal, review, save once, and must never edit or retry. workflow.js must contain zero occurrences of the four forbidden nondeterminism lexemes Date.now, new Date, Math.random, and performance.now, including comments and strings. The workflow must require kernel_path, evaluation_root, test_command, benchmark_command, and baseline; treat canonical perf_takehome.py, problem.py, and tests as read-only. Create a fresh child directory under the real Session-local evaluation_root with exclusive creation; if any proposed directory already exists, fail without deleting, cleaning, overwriting, or reusing it. Prove realpath containment with path.relative for the evaluation directory and written candidate, rejecting absolute, empty, dot-dot, or symlink escapes; string-prefix checks do not count. Copy canonical problem.py under the exact name problem.py and recursively copy tests under tests, then write candidate bytes as perf_takehome.py. Hash the generated byte buffer, read back and hash the persisted bytes, require equality before testing, and immediately before return derive best_kernel_code from those persisted bytes and require its hash to equal the same SHA-256. Execute the exact provided test_command and benchmark_command from that evaluation directory with separate full stdout and stderr, numeric exit status, signal, error, cwd, and exact command recorded; no slicing, truncation, stream merging, or stdout PASS/FAIL token heuristics. Correctness passes only when the test process exits 0. Run and accept the benchmark only after correctness passes, only when its process exits 0, and only when exactly one anchored positive-integer CYCLES line is parsed; compute speedup as numeric baseline divided by cycles, never from an agent report. On any containment, copy, hash, command, correctness, benchmark, parse, or evidence failure, return overall_speedup null and best_kernel_code empty, with no winner. Evidence must bind candidate path, generated/persisted/winner SHA-256, both exact command strings and their SHA-256, both cwd values, both exit statuses/signals/errors, and complete separate stdout/stderr. After save and catalog selection, the parent must invoke one foreground kersor:dispatch-arg-synthesizer with exactly SESSION_DIR, RUN_DIR, WORKFLOW_NAME, absolute WORKFLOW_JS, CATALOG_ENTRY_JSON, RESOLVER_OUTPUT_JSON, OVERRIDES_JSON, and HANDOFF_TEXT, then dispatch only its validated dispatch-args.json unchanged; hand-written args or provenance are forbidden. baseline=147734"
+  },
+  "transfer_items": [
+    {
+      "actionable_hint": "",
+      "claim": "ksearch-kernel-optimization must NOT be selected again for this session (session_id=20260614-200847). All 6 dispatch attempts failed with agent_stall. No other tree-search or adaexplore workflow should be selected until the environment stall root cause is resolved.",
+      "confidence": "hypothesized",
+      "directive": "constrain",
+      "evidence": "user_provided",
+      "id": "ins-exp-1",
+      "kind": "workflow_compatibility",
+      "origin_lesson_id": "exp-20260614200847-047",
+      "scope": {
+        "backend": "cuda"
+      },
+      "source_round": 0,
+      "source_workflow": "experience-bank"
+    },
+    {
+      "actionable_hint": "",
+      "claim": "CUBLAS_COMPUTE_16F is broken on sm_89 for fp16; must use CUBLAS_COMPUTE_32F.",
+      "confidence": "hypothesized",
+      "directive": "avoid",
+      "evidence": "user_provided",
+      "id": "ins-exp-2",
+      "kind": "failed_strategy",
+      "origin_lesson_id": "exp-20260625062205-431",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "source_round": 0,
+      "source_workflow": "experience-bank"
+    },
+    {
+      "actionable_hint": "Future rounds should not rely on ncu for stall attribution; use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root). All bottleneck claims relying on ncu stall metrics are unmeasured; only latency from CUDA events is available.",
+      "confidence": "hypothesized",
+      "directive": "explore",
+      "evidence": "user_provided",
+      "id": "ins-exp-3",
+      "kind": "bottleneck",
+      "origin_lesson_id": "exp-20260625100527-448",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "source_round": 0,
+      "source_workflow": "experience-bank"
+    },
+    {
+      "actionable_hint": "Future rounds must read per-candidate metrics.json directly (claimed_speedup field) or run with EVAL_BENCH_REF=true to get real speedups from the harness. Do not trust overall_speedup=1 as failure when EVAL_BENCH_REF=false.",
+      "claim": "EVAL_BENCH_REF=false harness contract causes sol-execbench to skip reference timing, reporting speedup=0 for all candidates. The workflow interpreted this as total failure (all 6 attempts marked valid=false, reward=2, speedup=0) and declared convergence_status=stalled, masking real 1.02-1.04x speedups.",
+      "confidence": "hypothesized",
+      "directive": "avoid",
+      "evidence": "user_provided",
+      "id": "ins-exp-4",
+      "kind": "failed_strategy",
+      "origin_lesson_id": "exp-20260625114104-469",
+      "scope": {
+        "backend": "cuda"
+      },
+      "source_round": 0,
+      "source_workflow": "experience-bank"
+    },
+    {
+      "actionable_hint": "Do not rely on ncu for stall metrics on this host. Use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root); stall attribution is unavailable. Confirmed in round 1: bottleneck inferred from op shape + roofline + CUDA-event latency deltas, not ncu stall metrics.",
+      "confidence": "hypothesized",
+      "directive": "explore",
+      "evidence": "user_provided",
+      "id": "ins-exp-5",
+      "kind": "bottleneck",
+      "origin_lesson_id": "exp-20260625144721-495",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "source_round": 0,
+      "source_workflow": "experience-bank"
+    }
+  ]
+}

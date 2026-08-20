@@ -1,0 +1,9 @@
+{
+  "code_source": "output.json:best_kernel_code",
+  "path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/best-kernel/best.py",
+  "path_source": "analysis.json:best_kernel",
+  "schema_version": 1,
+  "sha256": "a6441b10056f958a1183df6966c6d0d22293a2bc788a70ff8155032478dad8b9",
+  "source_path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/best-kernel/best.py",
+  "source_sha256": "a6441b10056f958a1183df6966c6d0d22293a2bc788a70ff8155032478dad8b9"
+}

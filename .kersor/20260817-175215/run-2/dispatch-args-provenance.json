@@ -1,0 +1,208 @@
+{
+  "workflow_name": "vliw-bundle-packing-optimization-2",
+  "round": 2,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215",
+  "run_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2",
+  "allowed_args": [
+    "kernel_path",
+    "evaluation_root",
+    "test_command",
+    "benchmark_command",
+    "baseline",
+    "model_mechanical",
+    "model_generation",
+    "exp_dir",
+    "experience_excerpts",
+    "attempt_evidence",
+    "attempt_plan"
+  ],
+  "allowed_args_note": "CATALOG_ENTRY_JSON.all_args = [kernel_path, evaluation_root, test_command, benchmark_command, baseline, model_mechanical, model_generation]; exp_dir + experience_excerpts + attempt_evidence + attempt_plan travel as typed fields per synthesis rule 1.",
+  "resolver_invocation": "KERSOR_PYTHON=/Users/haiyan-infiniai/Agent4Kernel/KerSor/.kersor/local-test-venv/bin/python bash /Users/haiyan-infiniai/Agent4Kernel/KerSor/scripts/resolve-args.sh <SESSION_DIR> vliw-bundle-packing-optimization-2 /tmp/catalog-r2-wrapped.json",
+  "resolver_must_ask": [
+    "baseline",
+    "evaluation_root"
+  ],
+  "missing_required": [],
+  "missing_required_note": "Both resolver must_ask entries are covered by authoritative OVERRIDES_JSON values (baseline=147734 numeric; evaluation_root=<session>/workflow-authoring/candidates). No required arg remains ungrounded.",
+  "fields": {
+    "kernel_path": {
+      "source": "resolver (state.kernel_path)",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/perf_takehome.py — canonical seed kernel, carried over from round 1 unchanged (round-1 dispatch used the same value; state.kernel_path is still the provided kernel, seed_origin=provided_kernel)"
+    },
+    "evaluation_root": {
+      "source": "override (authoritative)",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/candidates — origin: authoring_contract.candidate_evaluation_root; round-1 used candidate-0 so the workflow's exclusive-creation mkdir loop (candidate-0..99) will take candidate-1; verified candidate-0 is the only existing child",
+      "origin": "authoring_contract.candidate_evaluation_root; round-1 used candidate-0 so exclusive creation will take candidate-1"
+    },
+    "test_command": {
+      "source": "override (authoritative)",
+      "value_summary": "/Users/haiyan-infiniai/homebrew/bin/python3 tests/submission_tests.py CorrectnessTests.test_kernel_correctness — origin: round-1 env-1 gate: login-shell PATH resolves python3 to /usr/bin/python3 3.9.6 which SyntaxErrors on frozen_problem.py match-statement; absolute Homebrew 3.14.6 path verified on host. The workflow runs `cd \"<evalDir>\" && <command>`; the absolute interpreter path survives any login-shell PATH",
+      "origin": "round-1 env-1 gate: login-shell PATH resolves python3 to /usr/bin/python3 3.9.6 which SyntaxErrors on frozen_problem.py match-statement; absolute Homebrew 3.14.6 path verified on host"
+    },
+    "benchmark_command": {
+      "source": "override (authoritative)",
+      "value_summary": "/Users/haiyan-infiniai/homebrew/bin/python3 -c \"import sys; sys.path.insert(0,'tests'); from submission_tests import cycles; print('CYCLES:', cycles())\" — origin: same env-1 interpreter pin + verified single final CYCLES line in copy-layout. JSON quoting verified: file parses, shlex splits into [python3, -c, program] with the program intact",
+      "origin": "same env-1 interpreter pin + verified single final CYCLES line in copy-layout"
+    },
+    "baseline": {
+      "source": "override (authoritative)",
+      "value_summary": "147734 (JSON number, not string) — origin: tests/submission_tests.py:63 BASELINE + test-method.md Baseline Evidence (re-verified 2026-08-19: canonical restored to git HEAD af14cbb2…, 8/8 PASS, CYCLES 147734). Workflow computes Number(args.baseline) so a numeric value avoids any re-parse surprise",
+      "origin": "tests/submission_tests.py:63 BASELINE + test-method.md Baseline Evidence (re-verified 2026-08-19: canonical restored to git HEAD af14cbb2…, 8/8 PASS, CYCLES 147734)"
+    },
+    "model_mechanical": {
+      "source": "resolver (config default, #19)",
+      "value_summary": "sonnet — resolver resolved model_mechanical=sonnet (config.model_mechanical empty -> default(sonnet)); same as round-1 dispatch. Workflow uses it for the 5 mechanical agent turns (read-kernel-source, setup-eval-dir, correctness-test, benchmark, verify-candidate)"
+    },
+    "model_generation": {
+      "source": "round-1 carryover / workflow default",
+      "value_summary": "sonnet — round-1 dispatch carried model_generation=sonnet; workflow default is also 'sonnet' (args.model_generation || 'sonnet'). Used for the vliw-optimizer generation turn"
+    },
+    "exp_dir": {
+      "source": "RUN_DIR (synthesis rule 2)",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2 — this round's fresh run directory (round 2)"
+    },
+    "experience_excerpts": {
+      "source": "round-1-transfer.json (filter evidence == user_provided)",
+      "value_summary": "4 items [{kind, directive, claim, scope}] — the bank-tagged user_provided priors: ins-exp-2 (CUBLAS_COMPUTE_16F avoid), ins-exp-1 (ksearch/workflow-selection constrain), ins-exp-3 + ins-exp-5 (ncu ERR_NVGPUCTRPERM blocked; CUDA-event latency as evidence axis). NOTE: the dispatch briefing said 5, but round-1-transfer.json contains exactly 4 user_provided items (verified by jq and grep); round-0-transfer.json contains 5. The file is authoritative, so 4 were emitted verbatim",
+      "discrepancy_note": "briefing_count=5, actual_count=4; per spec round-{current_round-1}-transfer.json = round-1-transfer.json was read"
+    },
+    "attempt_evidence": {
+      "source": "attempt_result",
+      "value_summary": "$SESSION_DIR/run-1/attempt-result.json emitted VERBATIM (diff-verified byte-equal after JSON normalization): outcome.failure_class=correctness_mismatch (candidate dropped the `from problem import (...)` preamble), metric_contract.baseline_latency_ms=147734, transfer_items=3 (fail-1 avoid, env-1 gate, ins-1 bottleneck)"
+    },
+    "attempt_plan": {
+      "source": "selection_json",
+      "value_summary": "$SESSION_DIR/round-2-selection.json .attempt_plan extracted VERBATIM (diff-verified): phase_intent=optimize, fallback_workflow=vliw-bundle-packing-optimization-2, evidence_signals.prior_failed_strategy=true, candidate_plans=1"
+    }
+  },
+  "overrides_applied": {
+    "file": "/tmp/vliw-overrides-r2.json",
+    "keys": ["baseline", "evaluation_root", "test_command", "benchmark_command"],
+    "precedence": "Applied last per synthesis rule 2 — explicit authoritative CLI values win over resolver output. All four are required_args of this workflow, so no override lands on an unconsumed key (no warnings needed for unknown-arg overrides).",
+    "baseline": "147734 (number) — see fields.baseline",
+    "evaluation_root": "<session>/workflow-authoring/candidates — see fields.evaluation_root",
+    "test_command": "absolute Homebrew python3 correctness command — see fields.test_command",
+    "benchmark_command": "absolute Homebrew python3 -c CYCLES command — see fields.benchmark_command"
+  },
+  "exploration_policy": {
+    "intent": "hold",
+    "signals": [
+      "workflow exposes no breadth/depth knobs: all_args = paths+commands+baseline+models only; workflow.js consumes no iterations/breadth/seed_candidates/temperature arg",
+      "fixed 4-phase pipeline (Analyze -> Bundle-And-Vectorize -> Evaluate -> Report) with a single generation turn",
+      "round-2 of max_workflows=2 — final round; nothing to widen into"
+    ],
+    "knobs_adjusted": []
+  },
+  "knowledge_tools_injected": {
+    "appended": false,
+    "reason": "no_semantic_field",
+    "detail": "retrieval_mode=on and resolve-knowledge-corpora.sh produced a context-hub block, but the workflow accepts none of op_description/problem_description/kernel_spec/task_spec (or any other semantic description field), so per rule 2 there is no legal append target. Same situation as round 1."
+  },
+  "profiling_guide_injected": {
+    "appended": false,
+    "reason": "no_guide",
+    "detail": "resolve-profiling-guide.sh emitted '(no profiling guide configured for backend=python)'; CPU-hosted VLIW simulator task has no vendor profiler. Also no semantic field to append to."
+  },
+  "anti_cheat_injected": {
+    "appended": false,
+    "reason": "no_semantic_field",
+    "detail": "resolve-anti-cheat-block.sh emitted the NO HARNESS MANIPULATION block (rule: always on), but this workflow exposes no semantic description field to append it to — all_args are paths/commands/baseline/models. Same as round 1; the constraint is instead enforced structurally by the workflow's own fail-closed eval contract (SHA-256 binding, exit-0 gates, single-CYCLES parse)."
+  },
+  "handoff_injected": {
+    "appended": false,
+    "reason": "no_semantic_field",
+    "detail": "HANDOFF_TEXT (/tmp/vliw-handoff-r2.md) could not be appended: the workflow accepts none of op_description/problem_description/kernel_spec/task_spec. The round-1 evidence it renders travels instead through the typed channel — attempt_evidence carries env-1 (interpreter pin), fail-1 (preamble avoid), ins-1 (bottleneck) verbatim, and the interpreter-pin directive is additionally baked into the authoritative test_command/benchmark_command overrides. Same limitation as round 1."
+  },
+  "experience_excerpts_injected": {
+    "count": 4,
+    "source": "user_seed",
+    "reason": "round-1-transfer user_provided items (bank-seeded from round-0 experience-bank)",
+    "detail": "Emitted as typed array alongside (not inside) any prose field, per rule 2 channel 2."
+  },
+  "attempt_evidence_injected": {
+    "present": true,
+    "source_file": "run-1/attempt-result.json",
+    "transfer_items": 3
+  },
+  "attempt_plan_injected": {
+    "present": true,
+    "source_file": "round-2-selection.json",
+    "candidate_plans": 1
+  },
+  "seed_candidates_injected": {
+    "present": false,
+    "reason": "not_round_1"
+  },
+  "sister_kernels_injected": {
+    "present": false,
+    "reason": "no_sister_kernels_dir"
+  },
+  "reward_integrity_overrides": [],
+  "reward_integrity_overrides_note": "Rule 11 not applicable: no eval_bench_ref flag in any command, and the baseline is the task's own frozen scalar cycle count (cycles-self), not a fast library.",
+  "fair_baseline_contract": {
+    "baseline_id": null,
+    "baseline_ms": null,
+    "injected_into_dispatch": false,
+    "reason": "workflow_does_not_declare"
+  },
+  "fair_baseline_contract_note": "No $SESSION_DIR/contract.env exists and the catalog all_args includes neither fair_baseline_id nor fair_baseline_ms. The session's frozen baseline (147734 cycles) is carried via the authoritative baseline override, grounded in tests/submission_tests.py:63 and test-method.md Baseline Evidence.",
+  "note_requirements": [
+    {
+      "requirement": "baseline=147734 (explicit kv hint at end of user_note)",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["baseline"],
+      "reason": "Emitted as JSON number 147734 via authoritative override; independently grounded in tests/submission_tests.py:63 BASELINE and test-method.md Baseline Evidence (8/8 PASS, CYCLES 147734)."
+    },
+    {
+      "requirement": "Workflow must require kernel_path, evaluation_root, test_command, benchmark_command, baseline",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["kernel_path", "evaluation_root", "test_command", "benchmark_command", "baseline"],
+      "reason": "All five are required_args in the catalog entry and validated with explicit throws at workflow.js lines 67-78; all five are present in dispatch-args.json."
+    },
+    {
+      "requirement": "Exclusive-creation fresh child directory under the real Session-local evaluation_root; never delete/overwrite/reuse an existing one",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["evaluation_root", "workflow behavior (Evaluate phase setup-eval-dir turn)"],
+      "reason": "evaluation_root points at workflow-authoring/candidates (authoring_contract.candidate_evaluation_root); the workflow's mkdir counter takes the next free candidate-N (candidate-1, since only candidate-0 exists)."
+    },
+    {
+      "requirement": "Copy problem.py as problem.py and tests under tests; write candidate bytes as perf_takehome.py; SHA-256 bind generated==persisted==winner bytes",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["workflow behavior (Evaluate phase)"],
+      "reason": "workflow.js Evaluate phase copies the exact copy-layout, hashes the generated buffer, reads back and hashes persisted bytes, and re-derives best_kernel_code from persisted bytes with hash equality (verified in round-1: binding held, ca85242791…)."
+    },
+    {
+      "requirement": "Execute the exact provided test_command and benchmark_command from the evaluation directory; correctness = exit 0; benchmark only after correctness, exit 0, exactly one CYCLES line; speedup = numeric baseline / cycles",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["test_command", "benchmark_command", "baseline", "workflow behavior (Evaluate phase gates)"],
+      "reason": "The exact override strings are dispatched; the workflow runs `cd \"<evalDir>\" && <command>` for each, gates benchmark on correctness.passed, requires cycles_found && cycles>0, and computes BASELINE/measuredCycles numerically."
+    },
+    {
+      "requirement": "Fail-closed on any containment/copy/hash/command/correctness/benchmark/parse failure: overall_speedup=null, best_kernel_code empty",
+      "source": "state.user_note",
+      "status": "informational",
+      "satisfied_by": ["workflow behavior"],
+      "reason": "workflow.js leaves overallSpeedup null unless every gate passes (round-1 demonstrated the fail-closed path). Note: on correctness failure this -2 workflow variant still returns diagnostic best_kernel_code from the generation source rather than empty — observed round-1 behavior, recorded here for audit."
+    },
+    {
+      "requirement": "After save and catalog selection, parent must invoke one foreground kersor:dispatch-arg-synthesizer with the 8 inputs, then dispatch only its validated dispatch-args.json unchanged",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["this synthesis run"],
+      "reason": "This agent was invoked with exactly SESSION_DIR, RUN_DIR, WORKFLOW_NAME, WORKFLOW_JS, CATALOG_ENTRY_JSON, RESOLVER_OUTPUT_JSON, OVERRIDES_JSON, HANDOFF_TEXT; output is the two files in run-2 and nothing else."
+    }
+  ],
+  "unmet_note_requirements": [],
+  "warnings": [
+    "CATALOG_ENTRY_JSON (/tmp/catalog-entry.json, unchanged from round 1) is a bare workflow object; scripts/resolve-args.sh requires the {workflows:[...]} envelope and errored ('Cannot iterate over null') on the bare form. Re-run with a byte-identical wrap: jq -s '{workflows: .}' /tmp/catalog-entry.json > /tmp/catalog-r2-wrapped.json. Entry contents unchanged; only the envelope was added.",
+    "Resolver's test_command/benchmark_command resolved to the bare prefix 'CUDA_VISIBLE_DEVICES=0 ' (kf_md_field_clean extracted an empty command body from test-method.md's fenced blocks, leaving only the auto-pinned env prefix). Both were fully replaced by the authoritative absolute-interpreter overrides; the CUDA_VISIBLE_DEVICES prefix is irrelevant to this CPU-hosted python simulator task and was intentionally not re-added.",
+    "HANDOFF_TEXT, the ## Knowledge Tools (on-demand) block, and the ## NO HARNESS MANIPULATION block all had no semantic arg to attach to (workflow accepts none of op_description/problem_description/kernel_spec/task_spec) — same as round 1. Round-1 evidence still reaches the run through the typed attempt_evidence/experience_excerpts fields and through the interpreter-pin baked into the two command overrides.",
+    "experience_excerpts count is 4, not the briefed 5: round-1-transfer.json contains exactly 4 items with evidence=='user_provided' (ins-exp-1, ins-exp-2, ins-exp-3, ins-exp-5); the 5-user_provided set lives in round-0-transfer.json. Per spec (round-{current-1}=round-1) the round-1 file was read; 4 items emitted verbatim.",
+    "The four overrides are dispatch-briefing values marked authoritative:true; their origins are recorded verbatim in fields.*.origin and overrides_applied. They override (not merely supplement) resolver output and test-method.md's bare-`python` commands — deliberate, per the round-1 env-1 measured gate."
+  ]
+}

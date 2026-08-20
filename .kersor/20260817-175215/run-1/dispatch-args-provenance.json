@@ -1,0 +1,235 @@
+{
+  "workflow_name": "vliw-bundle-packing-optimization-2",
+  "workflow_js": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/proposals/vliw-bundle-packing-optimization-2/workflow.js",
+  "workflow_js_sha256": "44b194f8f17876e826f5e9d74b223858dee772a4196d3f5a128eef9bb6016e00",
+  "workflow_content_hash_matches_catalog": true,
+  "forbidden_nondeterminism_lexeme_count": 0,
+  "round": 1,
+  "mode": "explore",
+  "current_round": 1,
+  "max_workflows": 2,
+  "role": "optimizer",
+  "allowed_args": [
+    "kernel_path",
+    "evaluation_root",
+    "test_command",
+    "benchmark_command",
+    "baseline",
+    "model_mechanical",
+    "model_generation"
+  ],
+  "resolver_must_ask": [
+    "baseline",
+    "evaluation_root"
+  ],
+  "must_ask_resolution": {
+    "baseline": "resolved by authoritative override (baseline=147734), corroborated by state user_note terminal hint 'baseline=147734', test-method.md 'Baseline cycles: 147734' and 'Benchmark: 147734 cycles', and tests/submission_tests.py:63 'BASELINE = 147734'",
+    "evaluation_root": "resolved by authoritative override, corroborated by workflow-authoring/author-context-v2.json authoring_contract.candidate_evaluation_root (identical absolute path); directory exists and is empty"
+  },
+  "missing_required": [],
+  "unmet_note_requirements": [],
+  "overrides_file": {
+    "declared_path": "/tmp/vliw-overrides.json",
+    "found": false,
+    "note": "The declared OVERRIDES_JSON file was absent from the filesystem at synthesis time (searched /tmp and the session tree). Per the invocation's verified ground truth, it held authoritative values for exactly the resolver's two must_ask keys — baseline=147734 and evaluation_root=<session>/workflow-authoring/candidates — both marked authoritative with provenance. Both values were applied as explicit overrides and each is independently corroborated by canonical session artifacts recorded in fields.*.corroboration; nothing else was treated as an override."
+  },
+  "note_requirements": [
+    {
+      "requirement": "baseline=147734",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["baseline"],
+      "reason": "Explicit key=value hint in user_note; emitted verbatim as numeric baseline. Corroborated by test-method.md Baseline Evidence and tests/submission_tests.py BASELINE constant."
+    },
+    {
+      "requirement": "The workflow must require kernel_path, evaluation_root, test_command, benchmark_command, and baseline",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["kernel_path", "evaluation_root", "test_command", "benchmark_command", "baseline"],
+      "reason": "Catalog required_args lists exactly these five and workflow.js throws on each when empty; all five are grounded in dispatch-args.json."
+    },
+    {
+      "requirement": "Create a fresh child directory under the real Session-local evaluation_root with exclusive creation",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["evaluation_root", "workflow behavior (Evaluate phase setup-eval-dir mkdir counter)"],
+      "reason": "evaluation_root points at the Session-local workflow-authoring/candidates directory (exists, empty); workflow.js creates candidate-N exclusively under it."
+    },
+    {
+      "requirement": "Execute the exact provided test_command and benchmark_command from that evaluation directory",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["test_command", "benchmark_command", "workflow behavior (cd \"${evalDir}\" && command)"],
+      "reason": "Both commands emitted in their verified eval-dir-relative forms (python3, no cd prefix, no CUDA_VISIBLE_DEVICES prefix); workflow.js runs them via cd \"<evalDir>\" && <command> where problem.py and tests/ have been copied."
+    },
+    {
+      "requirement": "Treat canonical perf_takehome.py, problem.py, and tests as read-only",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["kernel_path", "workflow behavior (copy-then-test under evaluation_root)"],
+      "reason": "kernel_path names the canonical source for reading only; the workflow copies problem.py/tests into the exclusive eval dir and writes the candidate there."
+    },
+    {
+      "requirement": "Exactly one anchored positive-integer CYCLES line; speedup = baseline / cycles, never from an agent report",
+      "source": "state.user_note",
+      "status": "satisfied",
+      "satisfied_by": ["benchmark_command", "baseline"],
+      "reason": "benchmark_command prints exactly one final 'CYCLES: <int>' line (verified); workflow parses it and computes BASELINE / measured cycles."
+    },
+    {
+      "requirement": "EVAL_BENCH_REF / reference-timing contract (from bank excerpt)",
+      "source": "round-0-transfer.json",
+      "status": "informational",
+      "satisfied_by": [],
+      "reason": "CUDA/sol-execbench-scoped bank prior; this round's harness is the VLIW simulator and no eval_bench_ref flag appears in any emitted command. Rule 11 not triggered (flag absent — not invented)."
+    },
+    {
+      "requirement": "ncu-based bottleneck attribution constraints (from bank excerpts)",
+      "source": "round-0-transfer.json",
+      "status": "informational",
+      "satisfied_by": [],
+      "reason": "Backend-scoped to cuda; this round is backend=python (custom simulator, NCU Available: N/A). No ncu usage is dispatched."
+    },
+    {
+      "requirement": "ksearch-kernel-optimization must not be selected (from bank excerpt)",
+      "source": "round-0-transfer.json",
+      "status": "satisfied",
+      "satisfied_by": ["workflow selection (round-1-selection.json)"],
+      "reason": "Selected workflow is vliw-bundle-packing-optimization-2; no tree-search/adaexplore workflow dispatched."
+    }
+  ],
+  "fields": {
+    "kernel_path": {
+      "source": "resolver",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/perf_takehome.py (from state.kernel_path; catalog required arg)",
+      "corroboration": "sha256 af14cbb2e8666aaba375aa6875e731b176875cb89b6f870473ae05cda979c15d recomputed on this host matches the verified git-HEAD canonical kernel (correctness PASS 8/8, 147734 cycles, speedup 1.0x)."
+    },
+    "evaluation_root": {
+      "source": "override",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/workflow-authoring/candidates (authoritative override for resolver must_ask key; resolver left it unresolved)",
+      "corroboration": "Identical to authoring_contract.candidate_evaluation_root in workflow-authoring/author-context-v2.json; directory verified present and empty, so exclusive candidate-N creation cannot collide."
+    },
+    "test_command": {
+      "source": "override",
+      "value_summary": "python3 tests/submission_tests.py CorrectnessTests.test_kernel_correctness — eval-dir-relative form, verified exit 0 in an identical copy-layout",
+      "corroboration": "tests/submission_tests.py:57 defines class CorrectnessTests; the workflow executes `cd \"<evalDir>\" && <test_command>` after copying problem.py and tests/ into evalDir. test-method.md lists the same command (as `python`, inside a fenced code block the resolver cannot read); the override form uses python3 per the invocation's verified ground truth."
+    },
+    "benchmark_command": {
+      "source": "override",
+      "value_summary": "python3 -c \"import sys; sys.path.insert(0,'tests'); from submission_tests import cycles; print('CYCLES:', cycles())\" — eval-dir-relative form, verified exit 0 printing exactly one final CYCLES: <int> line",
+      "corroboration": "tests/submission_tests.py:67 defines module-level cycles() (and BASELINE at :63); the sys.path shim is required because the command runs from the eval dir where tests/ is a plain directory copied without __init__.py. Deliberately NOT the unittest SpeedTests form: submission_tests.py:86 asserts cycles() < BASELINE, which exits 1 for the baseline-equal canonical kernel. test-method.md's fenced form (`from tests.submission_tests import cycles`) also depends on package-style resolution that is not guaranteed in the copied layout; the override form is the verified one."
+    },
+    "baseline": {
+      "source": "override",
+      "value_summary": "147734 (numeric; authoritative override for resolver must_ask key)",
+      "corroboration": "user_note terminal hint 'baseline=147734'; test-method.md 'Baseline cycles: 147734' and Baseline Evidence 'Benchmark: 147734 cycles (speedup 1.0x)'; tests/submission_tests.py:63 BASELINE = 147734; canonical-kernel benchmark re-verified today at 147734 cycles. Emitted as a JSON number so workflow.js Number() coercion and speedup = 147734 / cycles are exact."
+    },
+    "model_mechanical": {
+      "source": "resolver",
+      "value_summary": "sonnet (resolver default; catalog default is haiku — workflow.js falls back to haiku only when the arg is absent)"
+    },
+    "model_generation": {
+      "source": "workflow_default",
+      "value_summary": "sonnet (workflow.js fallback default for MODEL_GENERATION when the arg is absent; emitted explicitly for auditability)"
+    },
+    "exp_dir": {
+      "source": "run_dir",
+      "value_summary": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-1 (set to RUN_DIR per synthesis rule)"
+    },
+    "experience_excerpts": {
+      "source": "experience_bank",
+      "value_summary": "5 items from round-0-transfer.json with evidence == user_provided (2 failed_strategy/avoid, 1 workflow_compatibility/constrain, 2 bottleneck/explore); emitted as the typed channel-2 array. All are backend=cuda bank priors from the previous session and are informational for this backend=python custom-simulator round."
+    },
+    "attempt_evidence": {
+      "source": "attempt_result",
+      "value_summary": "null — no canonical $SESSION_DIR/run-0/attempt-result.json exists (round 0 had no run directory). The stale run-1/attempt-result.json belongs to THIS round's own failed prior dispatch and is not prior-round evidence, so the cold-start null is emitted rather than a self-referential Result."
+    },
+    "attempt_plan": {
+      "source": "selection_json",
+      "value_summary": "round-1-selection.json attempt_plan extracted verbatim — 1 candidate_plan (vliw-bundle-packing-optimization-2, score 23, demoted/probation, fallback pick), phase_intent=optimize, seed_origin=provided_kernel, committed"
+    }
+  },
+  "semantic_field_injection": {
+    "description_fields_available": [],
+    "handoff_appended": false,
+    "retrieved_context_appended": false,
+    "retrieved_context_reason": "no_file",
+    "seed_candidates_appended": false,
+    "knowledge_tools_injected": false,
+    "knowledge_tools_reason": "no_semantic_field",
+    "profiling_guide_injected": false,
+    "profiling_guide_reason": "no_guide",
+    "anti_cheat_injected": false,
+    "anti_cheat_reason": "no_semantic_field",
+    "note": "This workflow accepts no semantic description field (all_args = kernel_path, evaluation_root, test_command, benchmark_command, baseline, model_mechanical, model_generation; workflow.js reads no op_description/problem_description/kernel_spec/task_spec). Per the do-not-append-to-raw-code-fields rule the ## Handoff Context, ## Knowledge Tools (on-demand) (context-hub block resolved), and ## NO HARNESS MANIPULATION blocks could not be attached to any arg. The HANDOFF_TEXT directives still travel as the typed experience_excerpts channel. The anti-cheat content is additionally enforced by the workflow's own contract: the user note's fail-closed evidence binding plus speedup computed only from the parsed CYCLES line."
+  },
+  "knowledge_tools_injected": {
+    "injected": false,
+    "reason": "no_semantic_field",
+    "resolved_block_available": true,
+    "roots": ["context-hub (/ch)"],
+    "detail": "resolve-knowledge-corpora.sh produced a context-hub block (retrieval_mode=on), but no semantic description arg exists to append it to."
+  },
+  "profiling_guide_injected": {
+    "injected": false,
+    "reason": "no_guide",
+    "detail": "resolve-profiling-guide.sh emitted '(no profiling guide configured for backend=python)' — omitted per spec."
+  },
+  "experience_excerpts_injected": {
+    "count": 5,
+    "source": "experience_bank",
+    "reason": "user_provided"
+  },
+  "attempt_evidence_injected": {
+    "present": false,
+    "reason": "no_attempt_result",
+    "source_file": null,
+    "transfer_items": 0,
+    "detail": "current_round=1 so the canonical prior is run-0/attempt-result.json, which does not exist (cold start)."
+  },
+  "attempt_plan_injected": {
+    "present": true,
+    "source_file": "round-1-selection.json",
+    "candidate_plans": 1
+  },
+  "sister_kernels_injected": {
+    "present": false,
+    "reason": "no_dir",
+    "dir": "sister-kernels/"
+  },
+  "seed_candidates_injected": {
+    "present": false,
+    "reason": "not_cold_start",
+    "detail": "seed_origin=provided_kernel (not generated_baseline/retrieved_adapted) and seed-candidates.md is absent."
+  },
+  "reward_integrity_overrides": [],
+  "reward_integrity_note": "Rule 11 not triggered: no eval_bench_ref flag in any form appears in benchmark_command (or the user note), and the baseline is a scalar canonical kernel, not a fast library. Nothing flipped, nothing invented.",
+  "fair_baseline_contract": {
+    "baseline_id": "",
+    "baseline_ms": "",
+    "injected_into_dispatch": false,
+    "reason": "workflow_does_not_declare"
+  },
+  "exploration_policy": {
+    "intent": "hold",
+    "signals": [
+      "current_round=1 of max_workflows=2 with no completed prior run (no trajectory signal)",
+      "workflow exposes no exploration knobs: all_args contains no iterations/breadth/seed_candidates/temperature-family arg and workflow.js consumes none"
+    ],
+    "knobs_adjusted": []
+  },
+  "resolver_gap_diagnosis": {
+    "field": "test_command/benchmark_command",
+    "observed": "Resolver emitted the truncated value 'CUDA_VISIBLE_DEVICES=0 ' for both commands",
+    "cause": "kf_md_field_clean cannot read values inside fenced code blocks; test-method.md carries both commands in ``` fences, so the resolver captured only the session-config cuda_visible_devices env prefix leaked through and an empty command tail",
+    "resolution": "The overrides carry the correct full eval-dir-relative commands, which were used verbatim; the 'CUDA_VISIBLE_DEVICES=0 ' prefix was dropped (it is a CUDA-session artifact, meaningless for a backend=python custom simulator)."
+  },
+  "warnings": [
+    "OVERRIDES_JSON file /tmp/vliw-overrides.json did not exist at synthesis time; its two declared authoritative values (baseline, evaluation_root) were applied from the invocation's verified ground truth and independently corroborated by user_note, test-method.md, author-context-v2.json, and tests/submission_tests.py before dispatch.",
+    "This catalog entry declares model_mechanical with catalog default haiku, but the resolver resolved model_mechanical=sonnet (resolver default). Resolver output was kept per precedence; the workflow accepts either.",
+    "model_generation is not listed in resolver output; emitted explicitly as sonnet (the workflow.js fallback default) for auditability.",
+    "The workflow reads no semantic description arg, so the rendered HANDOFF_TEXT, the resolved context-hub Knowledge Tools block, and the NO HARNESS MANIPULATION block could not be appended to any arg; handoff directives survive only as typed experience_excerpts. The selected workflow is a fresh proposal, so this is a fidelity reduction worth noting, not a blocker.",
+    "Two eval-layout risks are pre-verified for the orchestrator: the workflow's setup-eval-dir agent copies tests/submission_tests.py and tests/frozen_problem.py (not the tests/__pycache__ present in the canonical tree), and the benchmark_command's sys.path.insert(0,'tests') shim makes it independent of package-style imports in the copied layout.",
+    "round-1-selection.json carries evidence_warnings that epsilon exploration is OFF for this session (Tier-2 WSR data will not populate)."
+  ]
+}

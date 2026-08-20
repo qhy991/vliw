@@ -1,0 +1,1 @@
+{"stdout":"Testing forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nSpeedup over baseline:  21.423143851508122\nCYCLES: 6896\n","stderr":"","exit_code":0,"cycles":6896,"cycles_found":true}

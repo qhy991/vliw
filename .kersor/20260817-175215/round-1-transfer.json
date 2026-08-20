@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "through_round": 1,
+  "pointers": [
+    "round-1-summary.md"
+  ],
+  "items": [
+    {
+      "id": "env-1",
+      "kind": "env_fact",
+      "directive": "gate",
+      "claim": "The Evaluate correctness agent ran the test via `/bin/zsh -lc 'python3 tests/submission_tests.py ...'`, where login-shell PATH resolves python3 to /usr/bin/python3 3.9.6; frozen_problem.py uses `match op:` (Python 3.10+ syntax), so the recorded failure is a SyntaxError at frozen_problem.py:222 at import time — under this invocation ANY candidate, including a correct one, fails before the candidate is ever exercised. Re-run under Python 3.14 reaches the candidate and reveals the true defect (NameError: SCRATCH_SIZE at perf_takehome.py:136)",
+      "evidence": "runtime",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "host": "darwin"
+      },
+      "actionable_hint": "Pin the eval interpreter: the workflow's Evaluate phase must invoke both the correctness and benchmark commands with an absolute Python 3.10+ path (e.g. /Users/haiyan-infiniai/homebrew/bin/python3) or an explicit PATH prefix, never bare `python3` through a login shell, or every future candidate will be fail-closed on the frozen problem's match-statement syntax before its own code runs.",
+      "source_round": 1,
+      "source_workflow": "vliw-bundle-packing-optimization-2",
+      "pointers": [
+        "run-1/.runtime/agent-results/00003-correctness-test.json",
+        "run-1/.runtime/agent-results/00003-correctness-test.last-message.txt",
+        "run-1/analysis.md"
+      ]
+    },
+    {
+      "id": "fail-1",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "Generated kernel was emitted as a bare class body starting at `class KernelBuilder:` — the module docstring and the required `from problem import (Engine, DebugInfo, SLOT_LIMITS, VLEN, N_CORES, SCRATCH_SIZE, Machine, Tree, Input, HASH_STAGES, ...)` preamble were dropped, so every problem-module symbol is undefined and build_kernel dies with NameError: SCRATCH_SIZE at perf_takehome.py:136 during the first alloc_scratch call",
+      "evidence": "correctness",
+      "confidence": "measured",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Emit the candidate as a COMPLETE file: preserve the original module docstring and the exact `from problem import (...)` preamble before `class KernelBuilder:`. Before invoking the correctness suite, smoke-validate the artifact with `python3 -c \"import perf_takehome\"` and a 1-round build_kernel call so a preamble omission is caught in-phase rather than burning the eval cycle.",
+      "technique": "complete-file-emission",
+      "technique_status": "proposed",
+      "source_round": 1,
+      "source_workflow": "vliw-bundle-packing-optimization-2",
+      "pointers": [
+        "run-1/output.json",
+        "run-1/analysis.md",
+        "run-1/.runtime/agent-results/00001-vliw-optimizer.json"
+      ]
+    },
+    {
+      "id": "ins-exp-2",
+      "kind": "failed_strategy",
+      "directive": "avoid",
+      "claim": "CUBLAS_COMPUTE_16F is broken on sm_89 for fp16; must use CUBLAS_COMPUTE_32F.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625062205-431"
+    },
+    {
+      "id": "ins-exp-1",
+      "kind": "workflow_compatibility",
+      "directive": "constrain",
+      "claim": "ksearch-kernel-optimization must NOT be selected again for this session (session_id=20260614-200847). All 6 dispatch attempts failed with agent_stall. No other tree-search or adaexplore workflow should be selected until the environment stall root cause is resolved.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda"
+      },
+      "actionable_hint": "",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260614200847-047"
+    },
+    {
+      "id": "ins-1",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "The starter kernel is fully scalar and serial — one engine slot per bundle — while the machine offers 12 alu / 6 valu / 2 load / 2 store / 1 flow slots per cycle; the irregular per-lane forest gather (vload is contiguous-address-only, no lane-extract or gather op in the ISA) blocks full vectorization, so the main cycle lever is cross-lane VLIW parallelism packed around the unavoidable scalar gather and data-dependent hash",
+      "evidence": "llm_inferred",
+      "confidence": "inferred",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "shape": "forest_height=10, rounds=16, batch_size=256",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Give each batch lane private scratch registers and dependency-scoreboard-pack independent lanes into shared bundles (reject same-cycle producer-consumer and write-write hazards); vectorize only the contiguous index/value loads and lane-wise hash/branch arithmetic with vload/vstore/valu, keep hash constants deduplicated in scratch, and preserve debug compares as zero-cycle ordering barriers.",
+      "technique": "instruction_scheduling",
+      "source_round": 1,
+      "source_workflow": "vliw-bundle-packing-optimization-2",
+      "pointers": [
+        "run-1/.runtime/agent-results/00000-read-kernel-source.json",
+        "run-1/output.json"
+      ]
+    },
+    {
+      "id": "ins-r1d-1",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "Derived (from run-1/analysis.md Notes, not a source transfer item): the prior Aug-18 interrupted dispatch's 13,677-byte fully-vectorized 32x8-lane topological-list-schedule design (claimed ~2139 cycles design intent; that dispatch died at the workflow's EVAL_DIR ReferenceError before any eval dir existed, so the number is unmeasured) is the fastest re-derivation path for the next candidate once the import preamble is restored",
+      "evidence": "llm_inferred",
+      "confidence": "hypothesized",
+      "scope": {
+        "op": "vliw-bundle-packing",
+        "kernel_language": "python-simulator"
+      },
+      "actionable_hint": "Re-derive the next candidate from that design intent (32 lanes x 8 vector groups, topological list scheduler, requires batch_size divisible by VLEN), but treat ~2139 cycles as unverified narrative until measured; smoke-validate with a 1-round build_kernel before invoking the correctness suite.",
+      "technique": "instruction_scheduling",
+      "source_round": 1,
+      "source_workflow": "vliw-bundle-packing-optimization-2",
+      "pointers": [
+        "run-1/analysis.md"
+      ]
+    },
+    {
+      "id": "ins-exp-3",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root). All bottleneck claims relying on ncu stall metrics are unmeasured; only latency from CUDA events is available.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "Future rounds should not rely on ncu for stall attribution; use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625100527-448"
+    },
+    {
+      "id": "ins-exp-5",
+      "kind": "bottleneck",
+      "directive": "explore",
+      "claim": "ncu --set full is blocked on this host by ERR_NVGPUCTRPERM (RmProfilingAdminOnly=1, no root); stall attribution is unavailable. Confirmed in round 1: bottleneck inferred from op shape + roofline + CUDA-event latency deltas, not ncu stall metrics.",
+      "evidence": "user_provided",
+      "confidence": "hypothesized",
+      "scope": {
+        "backend": "cuda",
+        "gpu": "RTX4090"
+      },
+      "actionable_hint": "Do not rely on ncu for stall metrics on this host. Use CUDA-event latency deltas and roofline bandwidth % as the primary evidence axis.",
+      "source_round": 0,
+      "source_workflow": "experience-bank",
+      "origin_lesson_id": "exp-20260625144721-495"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "task_outcome": "complete",
+  "user_assessment": "success",
+  "user_feedback": "User approved via the feedback prompt: task completed successfully — measured 21.4231x (147734 -> 6896 cycles) exceeds the 8.0x target with correctness PASSED 8/8 and a hash-bound, re-verified best kernel. The KerSor issue draft is to be kept as a local draft only; do not submit it upstream.",
+  "issue_action": "drafted_only",
+  "issue_target": "local-draft",
+  "issue_url": ""
+}

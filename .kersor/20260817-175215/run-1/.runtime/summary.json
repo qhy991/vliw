@@ -1,0 +1,151 @@
+{
+  "contract_version": "akw-js-runtime-v1",
+  "status": "completed",
+  "output": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-1/output.json",
+  "events": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-1/.runtime/events.jsonl",
+  "journal": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-1/.runtime/journal.jsonl",
+  "calls": 4,
+  "replayed_calls": 0,
+  "native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "activations": [
+      {
+        "call_id": "Analyze/read-kernel-source/0",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Bundle-And-Vectorize/vliw-optimizer/1",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/setup-eval-dir/2",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/correctness-test/3",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      }
+    ]
+  },
+  "cumulative_native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "activations": [
+      {
+        "call_id": "Analyze/read-kernel-source/0",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Bundle-And-Vectorize/vliw-optimizer/1",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Analyze/read-kernel-source/0",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Bundle-And-Vectorize/vliw-optimizer/1",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/setup-eval-dir/2",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/correctness-test/3",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      }
+    ]
+  },
+  "transactions": {
+    "committed": 0,
+    "rolled_back": 0,
+    "cancelled": 0,
+    "snapshot_failed": 0,
+    "rollback_failed": 0,
+    "activations": []
+  },
+  "cumulative_transactions": {
+    "committed": 0,
+    "rolled_back": 0,
+    "cancelled": 0,
+    "snapshot_failed": 0,
+    "rollback_failed": 0,
+    "activations": []
+  },
+  "usage": {
+    "input_tokens": 642802,
+    "cached_input_tokens": 470528,
+    "output_tokens": 19328,
+    "total_tokens": 662130
+  },
+  "budget_charge": {
+    "tokens": 662130,
+    "unknown_usage_agent_calls": 0,
+    "incomplete_usage_agent_calls": 0
+  },
+  "cumulative_usage": {
+    "input_tokens": 1357351,
+    "cached_input_tokens": 1076224,
+    "output_tokens": 46905,
+    "total_tokens": 1404256
+  },
+  "cumulative_executed_calls": 7,
+  "cumulative_executed_agent_calls": 7,
+  "cumulative_executed_evaluations": 0,
+  "cumulative_budget_charge_tokens": 1404256,
+  "cumulative_unknown_usage_agent_calls": 1,
+  "cumulative_incomplete_usage_agent_calls": 1,
+  "dispatch_wall_seconds": 872.196,
+  "executor_preflight": {
+    "status": "not-required",
+    "sandbox": "danger-full-access",
+    "mechanism": null
+  },
+  "workflow_status": null,
+  "workflow_stop_reason": null,
+  "workflow_rounds": null
+}

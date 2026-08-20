@@ -1,0 +1,40 @@
+{
+  "output": {
+    "stdout": "Testing forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nTesting forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\n",
+    "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.626s\n\nOK\n",
+    "exit_code": 0,
+    "passed": true,
+    "summary": "CorrectnessTests.test_kernel_correctness passed with exit code 0."
+  },
+  "thread_id": "01a01cfb-a29c-7dc3-ac39-5f606a35b853",
+  "usage": {
+    "input_tokens": 54164,
+    "cached_input_tokens": 34304,
+    "output_tokens": 1040,
+    "total_tokens": 55204
+  },
+  "usage_observed": true,
+  "usage_complete": true,
+  "model_role": "profile",
+  "native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "thread_ids": [],
+    "status": "not-requested"
+  },
+  "isolation": {
+    "requested": null,
+    "effective": "fresh-process"
+  },
+  "artifacts": {
+    "final_message": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00003-correctness-test.last-message.txt",
+    "schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00003-correctness-test.schema.json",
+    "codex_output_schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00003-correctness-test.codex-schema.json",
+    "schema_mode": "strict",
+    "schema_fallback_reason": null,
+    "schema_rejection": null,
+    "codex_events": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00003-correctness-test.codex-events.jsonl",
+    "stderr": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00003-correctness-test.stderr.log"
+  }
+}

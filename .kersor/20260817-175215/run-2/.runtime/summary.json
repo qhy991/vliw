@@ -1,0 +1,175 @@
+{
+  "contract_version": "akw-js-runtime-v1",
+  "status": "completed",
+  "output": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/output.json",
+  "events": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/events.jsonl",
+  "journal": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/journal.jsonl",
+  "calls": 6,
+  "replayed_calls": 3,
+  "native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "activations": [
+      {
+        "call_id": "Analyze/read-kernel-source/0",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Bundle-And-Vectorize/vliw-optimizer/1",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/setup-eval-dir/2",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/correctness-test/3",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/benchmark/4",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/verify-candidate/5",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      }
+    ]
+  },
+  "cumulative_native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "activations": [
+      {
+        "call_id": "Analyze/read-kernel-source/0",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Bundle-And-Vectorize/vliw-optimizer/1",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/setup-eval-dir/2",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/correctness-test/3",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/correctness-test/3",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/benchmark/4",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      },
+      {
+        "call_id": "Evaluate/verify-candidate/5",
+        "requested": 0,
+        "spawned": 0,
+        "completed": 0,
+        "thread_ids": [],
+        "status": "not-requested"
+      }
+    ]
+  },
+  "transactions": {
+    "committed": 0,
+    "rolled_back": 0,
+    "cancelled": 0,
+    "snapshot_failed": 0,
+    "rollback_failed": 0,
+    "activations": []
+  },
+  "cumulative_transactions": {
+    "committed": 0,
+    "rolled_back": 0,
+    "cancelled": 0,
+    "snapshot_failed": 0,
+    "rollback_failed": 0,
+    "activations": []
+  },
+  "usage": {
+    "input_tokens": 713978,
+    "cached_input_tokens": 504064,
+    "output_tokens": 26094,
+    "total_tokens": 740072
+  },
+  "budget_charge": {
+    "tokens": 183587,
+    "unknown_usage_agent_calls": 0,
+    "incomplete_usage_agent_calls": 0
+  },
+  "cumulative_usage": {
+    "input_tokens": 713978,
+    "cached_input_tokens": 504064,
+    "output_tokens": 26094,
+    "total_tokens": 740072
+  },
+  "cumulative_executed_calls": 7,
+  "cumulative_executed_agent_calls": 7,
+  "cumulative_executed_evaluations": 0,
+  "cumulative_budget_charge_tokens": 740072,
+  "cumulative_unknown_usage_agent_calls": 1,
+  "cumulative_incomplete_usage_agent_calls": 1,
+  "dispatch_wall_seconds": 484.34,
+  "executor_preflight": {
+    "status": "not-required",
+    "sandbox": "danger-full-access",
+    "mechanism": null
+  },
+  "workflow_status": null,
+  "workflow_stop_reason": null,
+  "workflow_rounds": null
+}

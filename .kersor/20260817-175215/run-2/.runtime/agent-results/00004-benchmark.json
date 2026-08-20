@@ -1,0 +1,40 @@
+{
+  "output": {
+    "stdout": "Testing forest_height=10, rounds=16, batch_size=256\nCYCLES:  6896\nSpeedup over baseline:  21.423143851508122\nCYCLES: 6896\n",
+    "stderr": "",
+    "exit_code": 0,
+    "cycles": 6896,
+    "cycles_found": true
+  },
+  "thread_id": "01a01cfd-e121-7ec3-87af-ba39aaff5b10",
+  "usage": {
+    "input_tokens": 35069,
+    "cached_input_tokens": 17152,
+    "output_tokens": 496,
+    "total_tokens": 35565
+  },
+  "usage_observed": true,
+  "usage_complete": true,
+  "model_role": "profile",
+  "native_subagents": {
+    "requested": 0,
+    "spawned": 0,
+    "completed": 0,
+    "thread_ids": [],
+    "status": "not-requested"
+  },
+  "isolation": {
+    "requested": null,
+    "effective": "fresh-process"
+  },
+  "artifacts": {
+    "final_message": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00004-benchmark.last-message.txt",
+    "schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00004-benchmark.schema.json",
+    "codex_output_schema": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/schemas/00004-benchmark.codex-schema.json",
+    "schema_mode": "strict",
+    "schema_fallback_reason": null,
+    "schema_rejection": null,
+    "codex_events": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00004-benchmark.codex-events.jsonl",
+    "stderr": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2/.runtime/agent-results/00004-benchmark.stderr.log"
+  }
+}

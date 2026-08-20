@@ -1,0 +1,20 @@
+{
+  "backend": null,
+  "busy_seconds": null,
+  "coverage_ratio": 0.0,
+  "devices": [],
+  "dispatch_wall_seconds": 0.000165,
+  "finished_at": "2026-08-19T11:20:52Z",
+  "method": null,
+  "metric": "accelerator_busy_equivalent_seconds",
+  "per_device_busy_seconds": {},
+  "quality": "unavailable",
+  "reason": "sampler_unavailable",
+  "samples_attempted": 0,
+  "samples_valid": 0,
+  "sampling_interval_ms": 250,
+  "schema_version": 1,
+  "scope": null,
+  "started_at": "2026-08-19T11:20:52Z",
+  "status": "unavailable"
+}

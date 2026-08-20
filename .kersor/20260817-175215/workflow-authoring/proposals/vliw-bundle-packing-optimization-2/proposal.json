@@ -1,0 +1,37 @@
+{
+  "archive_on_nonwins": 3,
+  "baseline": {
+    "experiment_key": null,
+    "source": null
+  },
+  "evidence_binding": {
+    "binding_hash": "sha256:a51ef3d01b068dd939e5fe47eacadae78f98994bf3e797cd468d76167a79cad0",
+    "metadata_hash": "sha256:27e70849edec8514a16e5d46f2852167e0d521428fd6c5bf94ec23a121dc2c61",
+    "workflow_hash": "sha256:44b194f8f17876e826f5e9d74b223858dee772a4196d3f5a128eef9bb6016e00"
+  },
+  "history": [
+    {
+      "action": "created",
+      "archived_from": null,
+      "binding_hash": "sha256:a51ef3d01b068dd939e5fe47eacadae78f98994bf3e797cd468d76167a79cad0"
+    }
+  ],
+  "origin": "authored",
+  "provenance": {
+    "validation_gates": [
+      "candidate_type_authored",
+      "deterministic",
+      "has_meta",
+      "has_return",
+      "metadata_crosscheck",
+      "node_check",
+      "technique_id_valid"
+    ]
+  },
+  "results": [],
+  "schema_version": 1,
+  "status": "probation",
+  "technique": "vliw_bundle_packing",
+  "workflow_hash_ref": "sha256:44b194f8f17876e826f5e9d74b223858dee772a4196d3f5a128eef9bb6016e00",
+  "workflow_name": "vliw-bundle-packing-optimization-2"
+}

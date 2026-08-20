@@ -1,0 +1,1 @@
+{"schema_version":1,"verdict":"fail","round":2,"reason":"no dispatch witness for /Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-10/.kersor/20260817-175215/run-2 — round claims work but no Workflow dispatch was observed (.dispatch-witness.jsonl missing)"}

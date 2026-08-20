@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": [
+    "kernel_code",
+    "summary",
+    "bundling_strategy",
+    "vectorization_notes"
+  ],
+  "properties": {
+    "kernel_code": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "bundling_strategy": {
+      "type": "string"
+    },
+    "vectorization_notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

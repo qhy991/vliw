@@ -1,0 +1,18 @@
+{
+  "backend": "python",
+  "current_round": 1,
+  "extensions": {},
+  "integration_pattern": "custom_simulator",
+  "kernel_language": "python_reference",
+  "pending_terminal": "",
+  "phase": "analyzing",
+  "prepared": null,
+  "schema_version": 2,
+  "seed_origin": "provided_kernel",
+  "session_id": "",
+  "stall_count": 0,
+  "target_override": true,
+  "target_speedup": 8,
+  "workflows_filter": [],
+  "yolo": true
+}

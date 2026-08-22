@@ -1,0 +1,37 @@
+{
+  "allowed_write_root": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213",
+  "baseline_witness_sha256": "8023bf91a0f4973d655d980f12a2e41a8fdf5ac59d3856b3f84b95bda48acab6",
+  "contract": "candidate_output_ownership_v1",
+  "dispatch_package": {
+    "catalog": "89264d6724a401a1d80c696ab29fb50f8b0ede8ae1d6def6b7a85e7b1e3ba51c",
+    "dispatch_args": "6bb03cacb59fe98be0df522036891ad47a9276b897c37aa70a926b0d98824c7c",
+    "dispatch_provenance": "b62198baf9d011399d8b8db686a761379f29f5c1cfeed16ac67215365e0add8f",
+    "dsh_compatibility": "6858c6549136cc4f97a23e7ec1b5b8d002a710df2dc81744a5c17b0bf7f00871",
+    "dsh_workflow": "c8f6682830ab29f499700104037a31aaa59c3c1d2aa2bce6ecdef4c6a55d56da",
+    "input": "e63b94aa32e80f9d7216cb9006c3bb65e9b69722ec978b8e04ec9a10c45eb0c6",
+    "preflight": "5986c0acf83c961c6201188fd962e7801481c9ccf6e59fbf921a96656d7206d0",
+    "selection": "ded75bf860a87f7f7be1cdac10dcad9f5ea8c17980eef62f711eaacb512f22b4"
+  },
+  "project_root": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12",
+  "protected_files": {
+    "perf_takehome.py": "af14cbb2e8666aaba375aa6875e731b176875cb89b6f870473ae05cda979c15d",
+    "problem.py": "fadb0f0858e2259f5759077a5544b9906dad3ceee80d37b4f0aa77da730c93c9",
+    "tests/frozen_problem.py": "fadb0f0858e2259f5759077a5544b9906dad3ceee80d37b4f0aa77da730c93c9",
+    "tests/submission_tests.py": "11c57cc999da93acb41201191073cd657ddffa87635359b3157c6e177c18ea0a"
+  },
+  "recorded_at": "2026-08-22T01:53:37.677775Z",
+  "run_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/run-1",
+  "schema_version": 1,
+  "session_config_sha256": "07390b15da2219822eabe95c2d13af762aadde54a350911979cd6b3acde398f0",
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213",
+  "session_id": "20260821-195213",
+  "worktree": {
+    "git_root": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12",
+    "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked": {
+      ".kersor/.pending-session-id": "21dd8ecd28318cb177df3f0b6dec7ae03f5e1fb3902bfde634699581e66e03af",
+      ".kersor/active-session": "1ac65949e668ee107e5a5342ef70a1f2f42dced7dabb6646ec02cf6b16d24e4f"
+    }
+  }
+}

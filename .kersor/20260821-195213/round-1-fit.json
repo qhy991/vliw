@@ -1,0 +1,8 @@
+{
+  "workflow": "vliw-bundling-kernel-optimization",
+  "backend": "python",
+  "needs_adaptation": false,
+  "fit_confidence": "high",
+  "reasons": [],
+  "adaptation_hints": []
+}

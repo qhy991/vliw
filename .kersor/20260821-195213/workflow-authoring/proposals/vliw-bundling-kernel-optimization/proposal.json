@@ -1,0 +1,37 @@
+{
+  "archive_on_nonwins": 3,
+  "baseline": {
+    "experiment_key": null,
+    "source": null
+  },
+  "evidence_binding": {
+    "binding_hash": "sha256:407306d19a68d72ed80d930096ac5a40ecfc6d5255945c2991161a1df127b899",
+    "metadata_hash": "sha256:98b2733d97fdeff72b2b1d6cba3df28a80f91978fe89c039a575f31a55ec070a",
+    "workflow_hash": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926"
+  },
+  "history": [
+    {
+      "action": "created",
+      "archived_from": null,
+      "binding_hash": "sha256:407306d19a68d72ed80d930096ac5a40ecfc6d5255945c2991161a1df127b899"
+    }
+  ],
+  "origin": "authored",
+  "provenance": {
+    "validation_gates": [
+      "candidate_type_authored",
+      "deterministic",
+      "has_meta",
+      "has_return",
+      "metadata_crosscheck",
+      "node_check",
+      "technique_id_valid"
+    ]
+  },
+  "results": [],
+  "schema_version": 1,
+  "status": "probation",
+  "technique": "instruction_scheduling",
+  "workflow_hash_ref": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926",
+  "workflow_name": "vliw-bundling-kernel-optimization"
+}

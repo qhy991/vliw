@@ -1,0 +1,351 @@
+{
+  "authoring_contract": {
+    "candidate_evaluation_root": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/candidates",
+    "candidate_type": "authored",
+    "canonical_task_source": "read_only",
+    "fresh_session_required": true,
+    "handoff_seal": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/author-handoff.json",
+    "host_workflow_contract": "dsh_workflow_v1",
+    "one_technique_required": true,
+    "probation": true,
+    "required_direct_files": [
+      "workflow.js",
+      "metadata.json",
+      "rationale.md"
+    ],
+    "store": "workflows/proposals"
+  },
+  "dispatch": {
+    "description": "Author one KerSor workflow proposal",
+    "prompt": "Read and obey the complete workflow-author role at:\n/Users/haiyan-infiniai/Agent4Kernel/KerSor/agents/workflow-author.md\n\nYour only inputs are:\nSTAGING_DIR=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/staging\nAUTHOR_CONTEXT=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/author-context.json\n\nRead AUTHOR_CONTEXT and every owner named by the role before writing. Write\nexactly the three direct author files into STAGING_DIR. The canonical task\nsource is read-only; candidate evaluation must use a Session-local copy and\nbind correctness plus benchmark evidence to that exact candidate. Do not use\nor infer a parent-supplied metadata template. The role file and AUTHOR_CONTEXT\nare the only authoring contract. Author a canonical AKW module whose executable\nbody also passes the portable DSH Workflow subset: inline schemas, one string\nper type, and only agent/parallel/pipeline/phase/log/args hooks. DSH agent()\nchildren are advisory/read-only: they return source or analysis and must not\nwrite/edit files, run shell commands, or execute tests.\nThis is a strict fresh Session. Do not inspect or infer any prior Session artifact.\n\n",
+    "run_in_background": false
+  },
+  "existing_workflows": [
+    {
+      "accepted_problem_types": [
+        "gpu-kernel-optimization",
+        "kernel-search"
+      ],
+      "accepts_constraints": [],
+      "all_args": [
+        "sol_cli",
+        "sol_task_dir",
+        "sol_bench_config",
+        "sol_seed_dir",
+        "sol_cuda_visible_devices",
+        "sol_ld_library_path",
+        "sol_env_prefix",
+        "sol_definition_path",
+        "sol_substrate_dir"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": true,
+      "backend_portability": "any",
+      "backends": [
+        "ascend",
+        "triton",
+        "cuda",
+        "python",
+        "metax"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "existing_workflow",
+      "default_backend": "triton",
+      "description": "World-model-guided tree search for GPU kernel optimization (K-Search methodology)",
+      "directory": "KSearch",
+      "experimental": false,
+      "fidelity_boundary": "high_fidelity_method_translation",
+      "integration_patterns": [
+        "standalone",
+        "embedded_dispatch",
+        "embedded_inplace",
+        "sol_execbench_solution"
+      ],
+      "js_path": "KSearch/ksearch-kernel-optimization.js",
+      "known_broken": null,
+      "languages": [
+        "cuda",
+        "triton",
+        "ascendc",
+        "python_reference",
+        "metax"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "manifest",
+      "method_category": "tree_exploration",
+      "name": "ksearch-kernel-optimization",
+      "optimization_phases": [
+        "unknown"
+      ],
+      "platform": null,
+      "portability": "clean",
+      "probation": false,
+      "proposal_binding_hash": null,
+      "proposal_status": null,
+      "required_args": [
+        "problem_path"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "hybrid",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "speedup_over_baseline",
+      "supports_partial_patch": false,
+      "topology": "tree",
+      "validation_path": null,
+      "when_to_use": "When you need to explore a large kernel design space systematically rather than iterating on a single optimization path. Uses a co-evolving decision tree (world model) to track hypotheses, guide actio",
+      "workflow_content_hash": null
+    },
+    {
+      "accepted_problem_types": [
+        "framework-tuning",
+        "rocm-kernel-optimization",
+        "gpu-kernel-optimization",
+        "kernel-optimization"
+      ],
+      "accepts_constraints": [],
+      "all_args": [
+        "benchmark_command",
+        "csv_path",
+        "exp_dir",
+        "model_judgment",
+        "model_mechanical",
+        "model_profile",
+        "shapes",
+        "target_arch",
+        "wall_time_per_shape_min"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "rocm"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_path",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Tune AITER a8w8_blockscale bpreshuffle CSV entries for a target GPU + shape set by delegating to aiter.jit.tune_gemm, then verifying via the task benchmark harness. Fills the registry-dispatch / framework-tuning gap where the optimizable unit is a config CSV, not a kernel source.",
+      "directory": "aiter-bpreshuffle-csv-tuning",
+      "experimental": false,
+      "fidelity_boundary": "reversible-config-edit",
+      "integration_patterns": [
+        "registry_dispatch"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/aiter-bpreshuffle-csv-tuning/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "python_reference"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "config_tuning",
+      "name": "aiter-bpreshuffle-csv-tuning",
+      "optimization_phases": [
+        "unknown"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:f760a325d78500b739a5d59c5ec21ae2e3a9ea78aca1d39312a9093d2cd6b27e",
+      "proposal_status": "probation",
+      "required_args": [
+        "benchmark_command",
+        "csv_path",
+        "exp_dir",
+        "shapes",
+        "target_arch"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "unknown",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "pipeline",
+      "validation_path": null,
+      "when_to_use": "ROCm framework-tuning tasks whose kernel_path is a Python harness that dispatches into AITER (integration_pattern=registry_dispatch); optimization is populating tuned CSV rows for gfx942 (or other AIT",
+      "workflow_content_hash": "sha256:49124f4c69961c2554fd1179ea05bfd9393ddc8c6214d731f147400332bbd016"
+    },
+    {
+      "accepted_problem_types": [],
+      "accepts_constraints": [],
+      "all_args": [
+        "exp_dir",
+        "correctness_command",
+        "benchmark_command",
+        "kernel_path",
+        "task_dir",
+        "solution_schema_path",
+        "hidden_size",
+        "eps",
+        "workloads",
+        "language",
+        "backend",
+        "target_gpu",
+        "launch_overhead_batch_threshold",
+        "bandwidth_batch_threshold",
+        "rtol",
+        "atol",
+        "matched_ratio",
+        "model_mechanical",
+        "model_profile",
+        "model_judgment"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "cuda"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Regime-aware operator-fusion workflow for a fused residual-add+RMSNorm sol-execbench task: fuses the reference\\",
+      "directory": "regime-aware-fusion-kernel-optimization",
+      "experimental": false,
+      "fidelity_boundary": "strict_high_fidelity",
+      "integration_patterns": [
+        "sol_execbench_solution"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/regime-aware-fusion-kernel-optimization/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "cuda"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "multi_stage_refinement",
+      "name": "regime-aware-fusion-kernel-optimization",
+      "optimization_phases": [
+        "backend_native"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:21dfc9b2bd0b46b096fef648cb29188e48462d0fa14b5fe52913b7838ba31c88",
+      "proposal_status": "probation",
+      "required_args": [],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "unknown",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "pipeline",
+      "validation_path": null,
+      "when_to_use": "When a sol-execbench (or similarly harness-graded) task profile shows an unfused, multi-kernel elementwise+reduction chain (e.g. fused add+RMSNorm) whose live-measured latency is flat/launch-overhead-",
+      "workflow_content_hash": "sha256:bff7f08db6b1c8adcdec925fcd434dbe1af8a29d8e19a3e496c255bc67e15bf4"
+    },
+    {
+      "accepted_problem_types": [],
+      "accepts_constraints": [],
+      "all_args": [
+        "kernel_path",
+        "exp_dir",
+        "test_command",
+        "benchmark_command",
+        "target_gpu",
+        "op_description",
+        "shape_stability",
+        "shapes",
+        "round_num"
+      ],
+      "backend_capabilities": [],
+      "backend_matrix_eligible": false,
+      "backend_portability": "explicit",
+      "backends": [
+        "cuda"
+      ],
+      "base_workflow": null,
+      "best_kernel_field": "best_kernel_code",
+      "candidate_type": "authored",
+      "default_backend": null,
+      "description": "Shape-specialization solver: collapses every statically-known runtime dimension into a compile-time constant (constexpr) with static_assert invariants, dropping dynamic dispatch branches. Wins when the task shape space is fixed or a small enumerable set (e.g. a task directory workloads.json). Falls back honestly \u2014 reports a capability gap rather than silently degrading to a slower dynamic kernel \u2014 when the workload set is unbounded.",
+      "directory": "shape-specialization-kernel-optimization",
+      "experimental": false,
+      "fidelity_boundary": "compile_time_constants",
+      "integration_patterns": [
+        "standalone"
+      ],
+      "js_path": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/workflows/proposals/shape-specialization-kernel-optimization/workflow.js",
+      "known_broken": null,
+      "languages": [
+        "cuda"
+      ],
+      "lineage_path": null,
+      "max_kernel_lines": null,
+      "metadata_source": "variant",
+      "method_category": "spec_to_kernel",
+      "name": "shape-specialization-kernel-optimization",
+      "optimization_phases": [
+        "backend_native"
+      ],
+      "platform": null,
+      "portability": null,
+      "probation": true,
+      "proposal_binding_hash": "sha256:155cba3cca11fb3d5f6fe93fbc83ae96eab20592b2e61c25ef463995005ca3e6",
+      "proposal_status": "probation",
+      "required_args": [
+        "kernel_path"
+      ],
+      "required_one_of": [],
+      "requires_embedded_registration": false,
+      "requires_git": false,
+      "requires_harness": true,
+      "requires_ncu": false,
+      "role": "optimizer",
+      "runtime_requirements": {},
+      "seed_contract": "iterative",
+      "selection_tags": [],
+      "specialization_axes": [],
+      "speedup_field": "overall_speedup",
+      "supports_partial_patch": false,
+      "topology": "specialization",
+      "validation_path": null,
+      "when_to_use": "When kernel-profile.md declares Shape Stability: fixed or enumerable (a single concrete shape or a small closed set from workloads.json / test-method.md) and the seed kernel is a general-purpose dynam",
+      "workflow_content_hash": "sha256:f82a86eb95c6b28d60b4c39c7fc3c0a29f7ccb88e472c189ebbb38cf8d74e8f6"
+    }
+  ],
+  "routing_gap": {
+    "candidates": [],
+    "rejected": [],
+    "round": 1,
+    "selected_workflow": ""
+  },
+  "schema_version": 1,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213",
+  "task": {
+    "backend": "python",
+    "integration_pattern": "custom_simulator",
+    "kernel_profile": "# Kernel Profile\n\n## Parseable Fields\n\n- Kernel Path: /Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/perf_takehome.py\n- Language: python_reference\n- Backend: python\n- Optimization Phase: portable_dsl\n- Integration Pattern: custom_simulator\n- Kernel Path Role: standalone\n- Optimizable Unit: self\n- Operation Type: fused_op\n- Problem Shape: forest_height=10, n_nodes=2047, batch_size=256, rounds=16\n- Requires Partial Patch: false\n- Requires Embedded Registration: false\n- NCU Available: false\n- Profiler Available: none\n- TF32 Matmul Default: unknown\n- TF32 cudnn Default: unknown\n- float32 Matmul Precision: unknown\n- GPU Model: unknown\n- Has Harness: true\n- Harness Path: /Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/tests/submission_tests.py\n- Bottleneck Hypothesis: instruction_mix\n- Utilization (min): 4%\n- Utilization (max): 65%\n- Complexity Level: medium\n- Design Space Size: medium\n- Shape Stability: fixed\n- LOC: 275\n\n## Existing Optimizations\n\n- None implemented. The baseline `build()` method places each slot in its own single-engine instruction bundle, producing zero VLIW parallelism and zero vectorization.\n- The kernel uses only scalar `alu`, `load`, `store`, `flow`, and `debug` engines. The `valu` (vector), `vload`, and `vstore` engines are unused.\n- Scratch constants are cached via `const_map` to avoid redundant `const` loads.\n\n## Notes\n\n- **Architecture**: The target is a custom VLIW SIMD Python simulator (not a hardware GPU). The machine has 1 core, SLOT_LIMITS = {alu: 12, valu: 6, load: 2, store: 2, flow: 1, debug: 64}, VLEN=8, SCRATCH_SIZE=1536.\n- **Baseline**: 147,734 cycles (1.0\u00d7 speedup). Each non-debug instruction executes in its own cycle \u2014 ~4% slot utilization out of 23 max slots/cycle.\n- **Bottleneck**: `instruction_mix` \u2014 the kernel uses zero VLIW bundling and zero vectorization. The `build()` method emits one slot per instruction bundle, so only 1 of 23 available slots is used per cycle. The sequential hash chain (6 stages \u00d7 3 ALU ops each) is the critical dependency path. The gather access pattern `forest_values_p[idx]` (non-contiguous per-element loads) limits vectorization of the tree-value lookup.\n- **Utilization (min) = 4%** is the baseline: 1 slot/cycle \u00f7 23 max slots/cycle at 147,734 cycles.\n- **Utilization (max) = 65%** is an estimate of the achievable ceiling with VLIW bundling, vectorization (VLEN=8, processing 256/8=32 vector lanes per round), and software pipelining, while accounting for the sequential hash-chain dependency and the gather bottleneck. The best-known threshold (1363 cycles from `test_opus45_improved_harness`) corresponds to ~108\u00d7 speedup, consistent with aggressive VLIW+SIMD utilization.\n- **Problem Shape** is fixed: forest_height=10, n_nodes=2^(10+1)\u22121=2047, batch_size=256, rounds=16 (the single benchmark workload in `tests/submission_tests.py`).\n- **Integration Pattern** is `custom_simulator` because the performance contract is a repository-local Python VLIW interpreter, not a hardware compiler/runtime. The session config enforces `integration_pattern_contract: \"custom_simulator\"`. A CUDA-style standalone workflow is structurally incompatible even though the source is a single file.\n- **No deployment-topology.md** exists in SESSION_DIR, so all determinations are derived from first principles.\n- **Environment**: No NVIDIA, AMD, Ascend, or MetaX hardware. The target is the pure-Python simulator in `frozen_problem.py`. TF32 probes are not applicable (backend is `python`, not torch-based).\n- **Harness**: The benchmark harness is `tests/submission_tests.py` (SpeedTests) which runs `do_kernel_test(10, 16, 256)` and measures cycles via the simulator's `Machine.cycle` counter. The correctness harness is `tests/submission_tests.py` (CorrectnessTests) which runs the same workload 8 times.",
+    "language": "python_reference",
+    "target_speedup": "8",
+    "test_method": "# Test Method\n\n- Correctness Command: /Users/haiyan-infiniai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 tests/submission_tests.py CorrectnessTests\n- Benchmark Command: /Users/haiyan-infiniai/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 tests/submission_tests.py SpeedTests\n- Baseline Status: present\n",
+    "user_note": ""
+  },
+  "transfer_items": []
+}

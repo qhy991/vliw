@@ -1,0 +1,156 @@
+{
+  "schema_version": 2,
+  "evidence_warnings": [
+    "epsilon exploration is OFF for this session; set KERSOR_EXPLORE_EPSILON=0.2 before starting a research run to populate Tier-2 WSR data"
+  ],
+  "round": 1,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213",
+  "catalog_path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-catalog.json",
+  "selector": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/scripts/select-workflow.sh",
+  "selected_workflow": {
+    "name": "vliw-bundling-kernel-optimization",
+    "directory": "vliw-bundling-kernel-optimization",
+    "role": "optimizer",
+    "candidate_type": "authored",
+    "base_workflow": null,
+    "proposal_binding_hash": "sha256:407306d19a68d72ed80d930096ac5a40ecfc6d5255945c2991161a1df127b899",
+    "workflow_content_hash": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926",
+    "experimental": false,
+    "topology": "pipeline",
+    "method_category": "instruction_mix_rebalance",
+    "fidelity_boundary": "session_local_copy",
+    "description": "VLIW instruction bundling and vectorization for a custom Python VLIW SIMD simulator: packs independent instructions into the same cycle across multiple engines (alu, valu, load, store, flow) and uses vector instructions (vload, vstore, valu) to process VLEN=8 elements per slot, targeting the custom VLIW SIMD architecture in the Anthropic performance engineering take-home.",
+    "when_to_use": "When the kernel profile declares a custom VLIW SIMD Python simulator target (backend=python, language=python_reference) with instruction_mix bottleneck, zero VLIW bundling, and zero vectorization. The",
+    "score": 26,
+    "features": [
+      "eligible base: +10",
+      "optimizer role: +4",
+      "session-local workflow variant: +1",
+      "exact language compatibility: +4",
+      "exact backend compatibility: +2",
+      "required harness is available: +2",
+      "phase_match: workflow implements requested phase 'portable_dsl': +3"
+    ],
+    "demoted": true,
+    "demotion_reasons": [
+      "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+    ]
+  },
+  "filter_dead_end": null,
+  "seed_mismatch": null,
+  "routing": {
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "decided_by": "fallback",
+    "fallback_pick": "vliw-bundling-kernel-optimization",
+    "explored": false,
+    "propensity": {
+      "randomized": false,
+      "pi0": null,
+      "n_eligible": null,
+      "score_max": null
+    },
+    "rationale": ""
+  },
+  "attempt_plan": {
+    "schema_version": 1,
+    "round": 1,
+    "status": "committed",
+    "phase_intent": "optimize",
+    "seed_origin": "provided_kernel",
+    "fallback_workflow": "vliw-bundling-kernel-optimization",
+    "commit": {
+      "status": "committed",
+      "workflow": "vliw-bundling-kernel-optimization",
+      "decided_by": "fallback",
+      "rationale": ""
+    },
+    "evidence_signals": {
+      "transfer_file": null,
+      "prior_failed_strategy": false,
+      "prior_measured_bottleneck": false,
+      "prior_plateau": false,
+      "target_speedup": "8",
+      "warnings": [
+        "epsilon exploration is OFF for this session; set KERSOR_EXPLORE_EPSILON=0.2 before starting a research run to populate Tier-2 WSR data"
+      ]
+    },
+    "selection_policy": {
+      "deterministic_selector": "/Users/haiyan-infiniai/Agent4Kernel/KerSor/scripts/select-workflow.sh",
+      "scoring": "Research Runner additive score",
+      "sort_key": "demoted asc, score desc, name asc",
+      "model_owns_choice": true,
+      "demotion_override_required": false,
+      "wsr_stats": null
+    },
+    "candidate_plans": [
+      {
+        "workflow": "vliw-bundling-kernel-optimization",
+        "role": "optimizer",
+        "candidate_type": "authored",
+        "score": 26,
+        "demoted": true,
+        "demotion_reasons": [
+          "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+        ],
+        "rationale_features": [
+          "eligible base: +10",
+          "optimizer role: +4",
+          "session-local workflow variant: +1",
+          "exact language compatibility: +4",
+          "exact backend compatibility: +2",
+          "required harness is available: +2",
+          "phase_match: workflow implements requested phase 'portable_dsl': +3"
+        ]
+      }
+    ]
+  },
+  "profile_features": {
+    "input_mode": "task_directory",
+    "language": "python_reference",
+    "backend": "python",
+    "operation_type": "fused_op",
+    "ncu_available": "false",
+    "has_harness": "true",
+    "in_git_repo": "true",
+    "bottleneck": "instruction_mix",
+    "complexity": "medium",
+    "design_space": "medium",
+    "shape_stability": "fixed",
+    "problem_type": "python-kernel-optimization",
+    "optimization_phase": "portable_dsl"
+  },
+  "scoring_rubric": "Research advice over hard-veto survivors. Demoted candidates remain visible to the constrained model.",
+  "candidates": [
+    {
+      "name": "vliw-bundling-kernel-optimization",
+      "directory": "vliw-bundling-kernel-optimization",
+      "role": "optimizer",
+      "candidate_type": "authored",
+      "base_workflow": null,
+      "proposal_binding_hash": "sha256:407306d19a68d72ed80d930096ac5a40ecfc6d5255945c2991161a1df127b899",
+      "workflow_content_hash": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926",
+      "experimental": false,
+      "topology": "pipeline",
+      "method_category": "instruction_mix_rebalance",
+      "fidelity_boundary": "session_local_copy",
+      "description": "VLIW instruction bundling and vectorization for a custom Python VLIW SIMD simulator: packs independent instructions into the same cycle across multiple engines (alu, valu, load, store, flow) and uses vector instructions (vload, vstore, valu) to process VLEN=8 elements per slot, targeting the custom VLIW SIMD architecture in the Anthropic performance engineering take-home.",
+      "when_to_use": "When the kernel profile declares a custom VLIW SIMD Python simulator target (backend=python, language=python_reference) with instruction_mix bottleneck, zero VLIW bundling, and zero vectorization. The",
+      "score": 26,
+      "features": [
+        "eligible base: +10",
+        "optimizer role: +4",
+        "session-local workflow variant: +1",
+        "exact language compatibility: +4",
+        "exact backend compatibility: +2",
+        "required harness is available: +2",
+        "phase_match: workflow implements requested phase 'portable_dsl': +3"
+      ],
+      "demoted": true,
+      "demotion_reasons": [
+        "probation: unpromoted Proposal \u2014 pick only when the stable pool is insufficient or the task is out-of-distribution"
+      ]
+    }
+  ],
+  "rejected": []
+}

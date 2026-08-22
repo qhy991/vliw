@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "gate": "dsh_workflow_v1",
+  "verdict": "pass",
+  "workflow_source": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/proposals/vliw-bundling-kernel-optimization/workflow.js",
+  "workflow_sha256": "5d3c30835e11796bc2ffeff57dd9624001397eb230c0ff5e738106f4f03d0fc5",
+  "args_source": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/run-1/dispatch-args.json",
+  "args_sha256": "2e678214d2ea4ec68cd7c674335123f68e90ad618c845f6ed71b7ea3270568e5",
+  "body_sha256": "e0814d669ed84d8e51117ac791770ead08c4db840b093e157cf92622e21efc01",
+  "errors": []
+}

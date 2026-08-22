@@ -1,0 +1,9 @@
+{
+  "files": {
+    "metadata.json": "sha256:4808881101b60878f6b74aebda32de8e8ecf1c0c1a263ce940d33c4fcb211c31",
+    "rationale.md": "sha256:a14a8d7cfe35c14ac65b18f12ac8850579100a193d75b0656f7b44f6c4b55c1b",
+    "workflow.js": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926"
+  },
+  "schema_version": 1,
+  "staging": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/workflow-authoring/staging"
+}

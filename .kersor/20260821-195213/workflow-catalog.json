@@ -1,0 +1,69 @@
+{"workflows": [
+{
+  "name": "vliw-bundling-kernel-optimization",
+  "directory": "vliw-bundling-kernel-optimization",
+  "js_path": "workflow-authoring/proposals/vliw-bundling-kernel-optimization/workflow.js",
+  "description": "VLIW instruction bundling and vectorization for a custom Python VLIW SIMD simulator: packs independent instructions into the same cycle across multiple engines (alu, valu, load, store, flow) and uses vector instructions (vload, vstore, valu) to process VLEN=8 elements per slot, targeting the custom VLIW SIMD architecture in the Anthropic performance engineering take-home.",
+  "when_to_use": "When the kernel profile declares a custom VLIW SIMD Python simulator target (backend=python, language=python_reference) with instruction_mix bottleneck, zero VLIW bundling, and zero vectorization. The",
+  "topology": "pipeline",
+  "seed_contract": "unknown",
+  "optimization_phases": [
+    "portable_dsl"
+  ],
+  "specialization_axes": [],
+  "runtime_requirements": {},
+  "method_category": "instruction_mix_rebalance",
+  "fidelity_boundary": "session_local_copy",
+  "metadata_source": "variant",
+  "candidate_type": "authored",
+  "base_workflow": null,
+  "lineage_path": null,
+  "validation_path": null,
+  "experimental": false,
+  "probation": true,
+  "proposal_status": "probation",
+  "proposal_binding_hash": "sha256:407306d19a68d72ed80d930096ac5a40ecfc6d5255945c2991161a1df127b899",
+  "workflow_content_hash": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926",
+  "languages": [
+    "python_reference"
+  ],
+  "backends": [
+    "python"
+  ],
+  "backend_portability": "explicit",
+  "portability": null,
+  "integration_patterns": [
+    "custom_simulator"
+  ],
+  "backend_capabilities": [],
+  "accepted_problem_types": [],
+  "accepts_constraints": [],
+  "default_backend": null,
+  "backend_matrix_eligible": false,
+  "requires_ncu": false,
+  "requires_harness": true,
+  "requires_git": false,
+  "platform": null,
+  "role": "optimizer",
+  "selection_tags": [],
+  "all_args": [
+    "kernel_path",
+    "test_command",
+    "benchmark_command",
+    "exp_dir",
+    "target_speedup",
+    "baseline_cycles"
+  ],
+  "required_args": [
+    "kernel_path"
+  ],
+  "required_one_of": [],
+  "speedup_field": "overall_speedup",
+  "best_kernel_field": "best_kernel_code",
+  "known_broken": null,
+  "max_kernel_lines": null,
+  "supports_partial_patch": false,
+  "requires_embedded_registration": false
+}
+]
+}

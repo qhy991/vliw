@@ -1,0 +1,17 @@
+{
+  "context": {
+    "path": "profile-handoff/context.json",
+    "sha256": "sha256:de488ec03369d55b238eec8020e59576ea38e484ff86a73d27d472a81313b322"
+  },
+  "owner_role": "kernel-profiler",
+  "producer": {
+    "runtime": "dsh-subagent",
+    "session_id": "d13ce116-bc45-4738-b1c2-ee433b03981a"
+  },
+  "profile": {
+    "path": "kernel-profile.md",
+    "sha256": "sha256:54c5f75987dcd121f8745040d29d03062277e7cb015dd96979816769b22ca134"
+  },
+  "schema_version": 1,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213"
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "workflow": "vliw-bundling-kernel-optimization",
+  "synthesizer": "host-rescue",
+  "fields": {
+    "kernel_path": { "source": "state.kernel_path (resolver output)" },
+    "test_command": { "source": "test-method.md Correctness Command, amended by host: replaced codex-runtime python3 (3.12.13) with the pinned /Users/haiyan-infiniai/homebrew/bin/python3 (3.14.6) used by the baseline witness; narrowed to CorrectnessTests.test_kernel_correctness (the authoritative 8-trial suite) because the full SpeedTests class asserts sub-baseline thresholds that a round-1 candidate cannot satisfy by definition" },
+    "benchmark_command": { "source": "test-method.md Benchmark Command semantics, amended by host: SpeedTests asserts thresholds; the witness-equivalent cycles() probe prints the measured CYCLES integer without assertion, matching the kersor-11 69.36x evidence chain" },
+    "exp_dir": { "source": "run_dir derived from state.current_round" },
+    "target_speedup": { "source": "state.target_speedup" },
+    "baseline_cycles": { "source": "baseline-witness.json (147734, sha-bound to kernel af14cbb2…)" },
+    "python_bin": { "source": "host amendment: pinned interpreter; system python3 is 3.9.6 and cannot parse the frozen match syntax" }
+  },
+  "resolver_output_honored": ["kernel_path", "exp_dir", "target_speedup"],
+  "notes": "Session was rescued from stalled by the host after all three dsh author children were aborted by parent turn-end; the synthesizer amendment rules (test-method evidence, pinned interpreter, absence sentinels) were applied manually per agents/dispatch-arg-synthesizer.md rules 3-4."
+}

@@ -1,4 +1,6 @@
 trace.json
 **/*.pyc
+__pycache__/
+*.lock
 .hypothesis
 .DS_Store

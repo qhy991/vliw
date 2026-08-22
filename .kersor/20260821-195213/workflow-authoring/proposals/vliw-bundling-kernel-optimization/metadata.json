@@ -1,0 +1,44 @@
+{
+  "name": "vliw-bundling-kernel-optimization",
+  "candidate_type": "authored",
+  "technique": "instruction_scheduling",
+  "technique_status": "canonical",
+  "description": "VLIW instruction bundling and batch-SIMD vectorization authoring workflow for a repository-local CPU Python VLIW simulator (integration_pattern custom_simulator). An advisory analyst agent reads the one-slot-per-bundle KernelBuilder stream (147734 charged cycles, ~4 percent issue utilization) and returns bundle and vectorization opportunities; an advisory generator agent returns a complete drop-in KernelBuilder that packs independent slots across engines (alu/valu/load/store/flow) into legal multi-slot bundles and vectorizes the batch axis with vload/vstore/valu/vbroadcast (VLEN=8). Returns the candidate source via best_kernel_code with a static cycle estimate; correctness and benchmark measurement stay with the enclosing host verifier.",
+  "topology": "pipeline",
+  "method_category": "instruction_mix_rebalance",
+  "role": "optimizer",
+  "fidelity_boundary": "session_local_copy",
+  "languages": [
+    "python_reference"
+  ],
+  "backends": [
+    "python"
+  ],
+  "integration_patterns": [
+    "custom_simulator"
+  ],
+  "optimization_phases": [
+    "portable_dsl"
+  ],
+  "backend_portability": "explicit",
+  "speedup_field": "overall_speedup",
+  "best_kernel_field": "best_kernel_code",
+  "all_args": [
+    "kernel_path",
+    "test_command",
+    "benchmark_command",
+    "exp_dir",
+    "target_speedup",
+    "baseline_cycles"
+  ],
+  "required_args": [
+    "kernel_path"
+  ],
+  "requires_ncu": false,
+  "requires_harness": true,
+  "probation": true,
+  "content_hash": "sha256:3f36ae2532f5e2ab20208354e14e568809c5b62f90d621913feafe35db453926",
+  "origin": "authored",
+  "status": "probation",
+  "experimental": false
+}

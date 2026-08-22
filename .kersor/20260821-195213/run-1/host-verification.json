@@ -1,0 +1,39 @@
+{
+  "run_id": "run-1",
+  "session_id": "20260821-195213",
+  "verified_at": "2026-08-22T13:20:00+08:00",
+  "verification_path": "host_review_of_workflow_result",
+  "workflow_run_id": "wf_0ab99296-8ed",
+  "candidate": {
+    "origin": "workflow vliw-bundling-kernel-optimization (chunked Generate: 3 parts, 331 lines assembled)",
+    "workflow_result_sha256_of_assembled": "872593f9946b0ff375c92e48a76e64a1e00b4f5f0440953dc79c1f96ccaa32af",
+    "materialized_path": "run-1/candidate/perf_takehome.py",
+    "materialized_sha256": "0cb0bdf31be0215bd1a39bc14a0d519d3112fe3b3d9ca2f022555173293506a1",
+    "materialized_differs_from_assembled": true,
+    "host_amendments": [
+      "add alloc_vreg(name) alias for alloc_scratch(name, VLEN) — part 1 defined alloc_scratch, part 3 called alloc_vreg (chunk-seam interface mismatch)",
+      "rw() generic valu branch: track vec(s[3]) reads in addition to vec(s[2]) — second operand reads were untracked, allowing unsafe packing",
+      "build_kernel epilogue: pack self.slots (init/const emissions) together with body in ONE build() pass — the original packed only body, silently dropping all init slots (header loads, const loads, broadcasts), so the body read uninitialized scratch"
+    ]
+  },
+  "interpreter": "/Users/haiyan-infiniai/homebrew/bin/python3 (3.14.6, witness-bound pinned)",
+  "correctness": {
+    "command": "tests/submission_tests.py CorrectnessTests.test_kernel_correctness",
+    "result": "PASS",
+    "trials": 8,
+    "detail": "8/8 trials, forest_height=10 rounds=16 batch_size=256, random unseeded inputs, output values match reference_kernel2"
+  },
+  "benchmark": {
+    "command": "cycles() probe via submission_tests",
+    "cycles": 2235,
+    "baseline_cycles": 147734,
+    "speedup": 66.10022371364653,
+    "rounded": "66.10x"
+  },
+  "comparison_to_reference_sessions": {
+    "kersor_11_same_task": "69.36x @ 2130 cycles (user dsh web run)",
+    "handwritten_prior_best": "118x",
+    "note": "66.10x is within 5% of the kersor-11 protocol result and near the ~72x valu/gather theoretical floor for this strategy class"
+  },
+  "verdict": "candidate accepted: correctness PASS, 66.10x measured speedup"
+}

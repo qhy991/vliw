@@ -1,0 +1,9 @@
+{
+  "kernel_path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/best-kernel/best.py",
+  "test_command": "/Users/haiyan-infiniai/homebrew/bin/python3 tests/submission_tests.py CorrectnessTests.test_kernel_correctness",
+  "benchmark_command": "/Users/haiyan-infiniai/homebrew/bin/python3 -c 'import sys; sys.path.insert(0,\"tests\"); from submission_tests import cycles; print(\"CYCLES:\", cycles())'",
+  "exp_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213/run-1",
+  "target_speedup": 8,
+  "baseline_cycles": 147734,
+  "python_bin": "/Users/haiyan-infiniai/homebrew/bin/python3"
+}

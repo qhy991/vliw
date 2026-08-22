@@ -1,0 +1,12 @@
+{
+  "dispatch": {
+    "description": "Profile one KerSor Session",
+    "prompt": "Read and obey the complete kernel-profiler role at:\n/Users/haiyan-infiniai/Agent4Kernel/KerSor/agents/kernel-profiler.md\n\nYour only task inputs are:\nKERNEL_PATH=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/perf_takehome.py\nSESSION_DIR=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213\nTASK_DIR=/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12\n\nYou are the sole writer of exactly SESSION_DIR/kernel-profile.md for this\nhandoff. Inspect the current task and perform the factual profiling required by\nthe role. Write the required Parseable Fields exactly as specified. Do not\noptimize the candidate, modify canonical task source, modify Session state, or\nwrite the handoff seal. Return only after kernel-profile.md is complete.\nThis is a strict fresh Session. Do not inspect any other Session or task workspace.\n",
+    "run_in_background": false
+  },
+  "kernel_path": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/perf_takehome.py",
+  "parent_contract": "The parent must not write or edit kernel-profile.md. It must pass this dispatch envelope unchanged to exactly one foreground subagent and seal the returned bytes before reading them.",
+  "schema_version": 1,
+  "session_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12/.kersor/20260821-195213",
+  "task_dir": "/Users/haiyan-infiniai/Agent4Kernel/vliw-dsh-kersor-12"
+}
